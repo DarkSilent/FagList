@@ -16,6 +16,10 @@ const getAllKeys = db.prepare(
 
 const deleteKeyStmt = db.prepare("DELETE FROM api_keys WHERE key = ? AND is_admin = 0");
 
+const updateKeyUsername = db.prepare(
+  "UPDATE api_keys SET username = ? WHERE key = ? AND is_admin = 0"
+);
+
 async function keysRoutes(fastify) {
   fastify.addHook("onRequest", authHook);
 
@@ -60,6 +64,22 @@ async function keysRoutes(fastify) {
       return reply.code(403).send({ error: "Admin privileges required" });
     }
     const result = deleteKeyStmt.run(request.params.key);
+    if (result.changes === 0) {
+      return reply.code(404).send({ error: "Key not found or is admin key" });
+    }
+    return { ok: true };
+  });
+
+  // Admin-only: rename key
+  fastify.patch("/api/keys/:key", async (request, reply) => {
+    if (!request.isAdmin) {
+      return reply.code(403).send({ error: "Admin privileges required" });
+    }
+    const { username } = request.body || {};
+    if (!username || typeof username !== "string" || username.trim().length === 0) {
+      return reply.code(400).send({ error: "username is required" });
+    }
+    const result = updateKeyUsername.run(username.trim(), request.params.key);
     if (result.changes === 0) {
       return reply.code(404).send({ error: "Key not found or is admin key" });
     }

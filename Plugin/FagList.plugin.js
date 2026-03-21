@@ -27,9 +27,9 @@ module.exports = (() => {
   const css = `
     .faglist-modal-root {
       color: var(--text-normal);
-      padding: 20px 24px;
-      min-width: 680px;
-      max-width: 800px;
+      padding: 16px 20px;
+      width: 100%;
+      box-sizing: border-box;
       max-height: 85vh;
     }
     .faglist-scroll-list {
@@ -149,6 +149,7 @@ module.exports = (() => {
     }
     .faglist-textarea {
       width: 100%;
+      box-sizing: border-box;
       min-height: 80px;
       background: var(--background-tertiary);
       border: 1px solid var(--background-modifier-accent);
@@ -166,6 +167,7 @@ module.exports = (() => {
     }
     .faglist-input {
       width: 100%;
+      box-sizing: border-box;
       background: var(--background-tertiary);
       border: 1px solid var(--background-modifier-accent);
       border-radius: 8px;
@@ -203,6 +205,7 @@ module.exports = (() => {
     }
     .faglist-btn-row {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       margin-top: 10px;
     }
@@ -400,17 +403,16 @@ module.exports = (() => {
     return BdApi.Data.load(config.info.name, "apiKey") || "";
   }
 
-  function apiHeaders() {
-    return {
-      "Content-Type": "application/json",
-      "x-api-key": getApiKey(),
-    };
+  function apiHeaders(hasBody) {
+    const h = { "x-api-key": getApiKey() };
+    if (hasBody) h["Content-Type"] = "application/json";
+    return h;
   }
 
   async function apiFetch(path, options = {}) {
     const res = await BdApi.Net.fetch(`${getApiBase()}${path}`, {
       ...options,
-      headers: { ...apiHeaders(), ...(options.headers || {}) },
+      headers: { ...apiHeaders(!!options.body), ...(options.headers || {}) },
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -459,6 +461,11 @@ module.exports = (() => {
       }),
     deleteKey: (key) =>
       apiFetch(`/api/keys/${key}`, { method: "DELETE" }),
+    renameKey: (key, username) =>
+      apiFetch(`/api/keys/${key}`, {
+        method: "PATCH",
+        body: JSON.stringify({ username }),
+      }),
   };
 
   /* ── React helpers ──────────────────────────────────────── */
@@ -516,6 +523,53 @@ module.exports = (() => {
 
     const UserStore = BdApi.Webpack.getStore("UserStore");
     const currentUserId = UserStore?.getCurrentUser()?.id;
+
+    const importDiscordNote = async () => {
+      try {
+        const storeNames = ["UserNoteStore", "NoteStore", "UserNotesStore"];
+        let noteStore = null;
+        for (const name of storeNames) {
+          noteStore = BdApi.Webpack.getStore(name);
+          if (noteStore) break;
+        }
+        if (!noteStore) {
+          noteStore = BdApi.Webpack.getModule(m => m?.getNote && typeof m.getNote === "function");
+        }
+        if (!noteStore) {
+          BdApi.UI.showToast("NoteStore nicht gefunden.", { type: "error" });
+          return;
+        }
+
+        let note = noteStore.getNote(targetId);
+
+        if (!note) {
+          const NoteActions = BdApi.Webpack.getByKeys("updateNote") || BdApi.Webpack.getByKeys("fetchNote");
+          if (NoteActions) {
+            const fetchFn = NoteActions.fetchNote || NoteActions.getNote;
+            if (typeof fetchFn === "function") {
+              await fetchFn(targetId);
+              note = noteStore.getNote(targetId);
+            }
+          }
+        }
+
+        if (note && typeof note === "object" && note.note) {
+          note = note.note;
+        }
+        if (note && typeof note === "object") {
+          note = note.body || note.content || note.text || JSON.stringify(note);
+        }
+
+        if (note && typeof note === "string" && note.trim()) {
+          setMyNote((prev) => prev ? prev + "\n" + note : note);
+          BdApi.UI.showToast("Discord-Notiz übernommen!", { type: "success" });
+        } else {
+          BdApi.UI.showToast("Keine Discord-Notiz für diesen Nutzer vorhanden.", { type: "warning" });
+        }
+      } catch (e) {
+        BdApi.UI.showToast("Fehler beim Laden der Discord-Notiz.", { type: "error" });
+      }
+    };
 
     const load = useCallback(async () => {
       try {
@@ -579,11 +633,13 @@ module.exports = (() => {
         placeholder: "Notiz zu diesem Nutzer...",
         maxLength: 2000,
       }),
+      React.createElement("div", { style: { fontSize: "11px", color: "var(--text-muted)", textAlign: "right", marginTop: "4px", marginBottom: "8px" } }, `${myNote.length} / 2000`),
       React.createElement(
         "div",
         { className: "faglist-btn-row" },
         React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: save }, "Speichern"),
-        React.createElement("button", { className: "faglist-btn faglist-btn-danger", onClick: remove }, "L\u00f6schen")
+        React.createElement("button", { className: "faglist-btn faglist-btn-danger", onClick: remove }, "L\u00f6schen"),
+        React.createElement("button", { className: "faglist-btn", onClick: importDiscordNote, style: { background: "var(--background-modifier-accent)", color: "var(--text-normal)" } }, "\uD83D\uDCCB Discord-Notiz \u00fcbernehmen")
       ),
       myNoteDate && React.createElement("div", { className: "faglist-note-date" }, `Zuletzt bearbeitet: ${fmtDate(myNoteDate)}`),
 
@@ -637,31 +693,33 @@ module.exports = (() => {
 
     return React.createElement(
       "div",
-      { className: "faglist-modal-root", style: { minWidth: "440px" } },
+      { className: "faglist-modal-root" },
       error && React.createElement("div", { className: "faglist-error" }, error),
       saving && React.createElement("div", { className: "faglist-loading" }, "Speichere..."),
       React.createElement("div", { className: "faglist-section-title" }, "Neue Runde eintragen"),
       React.createElement(
         "div",
-        { className: "faglist-form-row" },
+        { className: "faglist-form-row", style: { flexDirection: "column", gap: "4px" } },
         React.createElement("input", {
           className: "faglist-input",
           value: game,
           onChange: (e) => setGame(e.target.value),
           placeholder: "Spiel",
           maxLength: 200,
-        })
+        }),
+        React.createElement("div", { style: { fontSize: "11px", color: "var(--text-muted)", textAlign: "right" } }, `${game.length} / 200`)
       ),
       React.createElement(
         "div",
-        { className: "faglist-form-row" },
+        { className: "faglist-form-row", style: { flexDirection: "column", gap: "4px" } },
         React.createElement("input", {
           className: "faglist-input",
           value: info,
           onChange: (e) => setInfo(e.target.value),
           placeholder: "Info / Kommentar",
           maxLength: 500,
-        })
+        }),
+        React.createElement("div", { style: { fontSize: "11px", color: "var(--text-muted)", textAlign: "right" } }, `${info.length} / 500`)
       ),
       React.createElement(
         "div",
@@ -694,9 +752,7 @@ module.exports = (() => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
-
-    const UserStore = BdApi.Webpack.getStore("UserStore");
-    const currentUserId = UserStore?.getCurrentUser()?.id;
+    const [myDiscordId, setMyDiscordId] = useState(null);
 
     const load = useCallback(async () => {
       try {
@@ -710,6 +766,7 @@ module.exports = (() => {
         setAvgRating(data.avgRating);
         setTotalRounds(data.totalRounds);
         setIsAdmin(me.is_admin === true);
+        setMyDiscordId(me.discord_user_id || null);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -781,7 +838,7 @@ module.exports = (() => {
                   "span",
                   { style: { display: "flex", alignItems: "center", gap: "8px" } },
                   React.createElement(Stars, { value: r.rating, readonly: true }),
-                  (r.author_discord_id === currentUserId || isAdmin)
+                  (r.author_discord_id === myDiscordId || isAdmin)
                     ? React.createElement(
                         "button",
                         { className: "faglist-delete-btn", onClick: () => removeRound(r.id), title: "L\u00f6schen" },
@@ -1163,12 +1220,38 @@ module.exports = (() => {
           thead.innerHTML = "<tr><th>User</th><th>Discord ID</th><th>Key</th><th>Admin</th><th></th></tr>";
           table.appendChild(thead);
 
+
           const tbody = document.createElement("tbody");
           for (const k of data.keys) {
             const tr = document.createElement("tr");
 
             const tdUser = document.createElement("td");
-            tdUser.textContent = k.username;
+            if (!k.is_admin) {
+              const nameField = document.createElement("input");
+              nameField.className = "faglist-input";
+              nameField.value = k.username;
+              nameField.style.cssText = "padding:4px 8px;font-size:13px;width:auto";
+              tdUser.appendChild(nameField);
+
+              const saveBtn = document.createElement("button");
+              saveBtn.className = "faglist-btn faglist-btn-primary";
+              saveBtn.textContent = "Umbenennen";
+              saveBtn.style.cssText = "padding:2px 8px;font-size:11px;margin-left:6px";
+              saveBtn.addEventListener("click", async () => {
+                const newName = nameField.value.trim();
+                if (!newName) return;
+                try {
+                  await api.renameKey(k.key, newName);
+                  BdApi.UI.showToast("Key umbenannt!", { type: "success" });
+                  loadKeys();
+                } catch (e) {
+                  BdApi.UI.showToast(e.message, { type: "error" });
+                }
+              });
+              tdUser.appendChild(saveBtn);
+            } else {
+              tdUser.textContent = k.username;
+            }
             tr.appendChild(tdUser);
 
             const tdId = document.createElement("td");
