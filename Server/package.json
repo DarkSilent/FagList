@@ -1,0 +1,16 @@
+{
+  "name": "faglist-server",
+  "version": "1.0.0",
+  "description": "FagList API Server - Collaborative Discord user notes and game round ratings",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "better-sqlite3": "^11.7.0",
+    "fastify": "^5.2.1",
+    "uuid": "^11.1.0"
+  }
+}
