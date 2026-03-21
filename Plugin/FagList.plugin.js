@@ -447,10 +447,10 @@ module.exports = (() => {
         method: "POST",
         body: JSON.stringify({ discord_id, username }),
       }),
-    renameUser: (discordId, username) =>
+    updateUser: (discordId, username, newDiscordId) =>
       apiFetch(`/api/users/${discordId}`, {
         method: "PATCH",
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username, discord_id: newDiscordId }),
       }),
 
     getKeys: () => apiFetch("/api/keys"),
@@ -1363,7 +1363,11 @@ module.exports = (() => {
             const tr = document.createElement("tr");
 
             const tdId = document.createElement("td");
-            tdId.textContent = u.discord_id;
+            const idField = document.createElement("input");
+            idField.className = "faglist-input";
+            idField.value = u.discord_id;
+            idField.style.cssText = "padding:4px 8px;font-size:13px;width:auto;font-family:monospace";
+            tdId.appendChild(idField);
             tr.appendChild(tdId);
 
             const tdName = document.createElement("td");
@@ -1376,14 +1380,15 @@ module.exports = (() => {
             const tdAction = document.createElement("td");
             const saveBtn = document.createElement("button");
             saveBtn.className = "faglist-btn faglist-btn-primary";
-            saveBtn.textContent = "Umbenennen";
+            saveBtn.textContent = "Speichern";
             saveBtn.style.cssText = "padding:4px 10px;font-size:12px";
             saveBtn.addEventListener("click", async () => {
               const newName = nameField.value.trim();
-              if (!newName) return;
+              const newId = idField.value.trim();
+              if (!newName || !newId) return;
               try {
-                await api.renameUser(u.discord_id, newName);
-                BdApi.UI.showToast("Nutzer umbenannt!", { type: "success" });
+                await api.updateUser(u.discord_id, newName, newId);
+                BdApi.UI.showToast("Nutzer aktualisiert!", { type: "success" });
                 loadUsers();
               } catch (e) {
                 BdApi.UI.showToast(e.message, { type: "error" });

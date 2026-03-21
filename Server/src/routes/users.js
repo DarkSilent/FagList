@@ -14,6 +14,12 @@ const upsertUser = db.prepare(`
   DO UPDATE SET username = excluded.username, updated_at = datetime('now')
 `);
 
+const updateUserDiscordId = db.prepare("UPDATE users SET discord_id = ?, username = ?, updated_at = datetime('now') WHERE discord_id = ?");
+const updateNotesTarget = db.prepare("UPDATE notes SET target_discord_id = ? WHERE target_discord_id = ?");
+const updateNotesAuthor = db.prepare("UPDATE notes SET author_discord_id = ? WHERE author_discord_id = ?");
+const updateRoundsTarget = db.prepare("UPDATE rounds SET target_discord_id = ? WHERE target_discord_id = ?");
+const updateRoundsAuthor = db.prepare("UPDATE rounds SET author_discord_id = ? WHERE author_discord_id = ?");
+
 async function usersRoutes(fastify) {
   fastify.addHook("onRequest", authHook);
 
@@ -48,7 +54,7 @@ async function usersRoutes(fastify) {
     }
 
     const { discordId } = request.params;
-    const { username } = request.body || {};
+    const { username, discord_id: newDiscordId } = request.body || {};
 
     if (!username || typeof username !== "string" || username.trim().length === 0) {
       return reply.code(400).send({ error: "username is required" });
@@ -59,7 +65,29 @@ async function usersRoutes(fastify) {
       return reply.code(404).send({ error: "User not found" });
     }
 
-    upsertUser.run(discordId, username.trim());
+    const trimmedName = username.trim();
+    const trimmedNewId = newDiscordId ? newDiscordId.trim() : null;
+
+    if (trimmedNewId && trimmedNewId !== discordId) {
+      if (!/^\d{17,20}$/.test(trimmedNewId)) {
+        return reply.code(400).send({ error: "Invalid Discord ID format" });
+      }
+      const conflict = getUser.get(trimmedNewId);
+      if (conflict) {
+        return reply.code(409).send({ error: "A user with this Discord ID already exists" });
+      }
+      const migrate = db.transaction(() => {
+        updateNotesTarget.run(trimmedNewId, discordId);
+        updateNotesAuthor.run(trimmedNewId, discordId);
+        updateRoundsTarget.run(trimmedNewId, discordId);
+        updateRoundsAuthor.run(trimmedNewId, discordId);
+        updateUserDiscordId.run(trimmedNewId, trimmedName, discordId);
+      });
+      migrate();
+    } else {
+      upsertUser.run(discordId, trimmedName);
+    }
+
     return { ok: true };
   });
 }
