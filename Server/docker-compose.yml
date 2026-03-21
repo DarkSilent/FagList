@@ -1,11 +1,22 @@
+name: faglist
+
 services:
   faglist-server:
-    build: .
+    image: ghcr.io/darksilent/faglist:latest
+    container_name: faglist-server
     ports:
       - "3000:3000"
+    environment:
+      - NODE_ENV=production
     volumes:
       - faglist-data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   faglist-data:

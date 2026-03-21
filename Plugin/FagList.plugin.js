@@ -1,16 +1,16 @@
 /**
  * @name FagList
- * @author FagList
+ * @author DarkSilent
  * @version 1.1.0
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
- * @source https://github.com/faglist/faglist
+ * @source https://github.com/DarkSilent/FagList
  */
 
 module.exports = (() => {
   const config = {
     info: {
       name: "FagList",
-      authors: [{ name: "FagList" }],
+      authors: [{ name: "DarkSilent" }],
       version: "1.1.0",
       description: "Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.",
     },
