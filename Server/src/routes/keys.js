@@ -20,6 +20,10 @@ const updateKeyUsername = db.prepare(
   "UPDATE api_keys SET username = ? WHERE key = ? AND is_admin = 0"
 );
 
+const updateKeyFull = db.prepare(
+  "UPDATE api_keys SET username = ?, discord_user_id = ? WHERE key = ? AND is_admin = 0"
+);
+
 async function keysRoutes(fastify) {
   fastify.addHook("onRequest", authHook);
 
@@ -70,16 +74,21 @@ async function keysRoutes(fastify) {
     return { ok: true };
   });
 
-  // Admin-only: rename key
+  // Admin-only: update key (username and/or discord_user_id)
   fastify.patch("/api/keys/:key", async (request, reply) => {
     if (!request.isAdmin) {
       return reply.code(403).send({ error: "Admin privileges required" });
     }
-    const { username } = request.body || {};
+    const { username, discord_user_id } = request.body || {};
     if (!username || typeof username !== "string" || username.trim().length === 0) {
       return reply.code(400).send({ error: "username is required" });
     }
-    const result = updateKeyUsername.run(username.trim(), request.params.key);
+    let result;
+    if (discord_user_id && typeof discord_user_id === "string" && discord_user_id.trim().length > 0) {
+      result = updateKeyFull.run(username.trim(), discord_user_id.trim(), request.params.key);
+    } else {
+      result = updateKeyUsername.run(username.trim(), request.params.key);
+    }
     if (result.changes === 0) {
       return reply.code(404).send({ error: "Key not found or is admin key" });
     }

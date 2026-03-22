@@ -524,10 +524,10 @@ module.exports = (() => {
       }),
     deleteKey: (key) =>
       apiFetch(`/api/keys/${key}`, { method: "DELETE" }),
-    renameKey: (key, username) =>
+    renameKey: (key, username, discord_user_id) =>
       apiFetch(`/api/keys/${key}`, {
         method: "PATCH",
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username, discord_user_id }),
       }),
 
     getAllNotes: () => apiFetch("/api/notes/all"),
@@ -1159,7 +1159,7 @@ module.exports = (() => {
   }
 
   /* ── Channel Modal ──────────────────────────────────────── */
-  function ChannelTab({ openUserModal }) {
+  function ChannelTab({ openUserModal, channelId: propChannelId }) {
     const [users, setUsers] = useState([]);
     const [channelName, setChannelName] = useState("");
     const [loading, setLoading] = useState(true);
@@ -1172,11 +1172,14 @@ module.exports = (() => {
         setError(null);
         setNoChannel(false);
 
-        const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
         const VoiceStateStore = BdApi.Webpack.getStore("VoiceStateStore");
         const ChannelStore = BdApi.Webpack.getStore("ChannelStore");
 
-        const voiceChannelId = SelectedChannelStore?.getVoiceChannelId?.();
+        let voiceChannelId = propChannelId;
+        if (!voiceChannelId) {
+          const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
+          voiceChannelId = SelectedChannelStore?.getVoiceChannelId?.();
+        }
         if (!voiceChannelId) {
           setNoChannel(true);
           setLoading(false);
@@ -1222,7 +1225,7 @@ module.exports = (() => {
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [propChannelId]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -1295,11 +1298,11 @@ module.exports = (() => {
     );
   }
 
-  function ChannelModal({ openUserModal }) {
+  function ChannelModal({ openUserModal, channelId }) {
     return React.createElement(
       "div",
       { className: "faglist-modal-root" },
-      React.createElement(ChannelTab, { openUserModal })
+      React.createElement(ChannelTab, { openUserModal, channelId })
     );
   }
 
@@ -1328,13 +1331,40 @@ module.exports = (() => {
             label: "FagList Alle Notizen",
             id: "faglist-allnotes",
             action: () => this.openAllNotesModal(),
-          }),
-          BdApi.ContextMenu.buildItem({
-            label: "FagList Voice Channel",
-            id: "faglist-channel",
-            action: () => this.openChannelModal(),
           })
         );
+      });
+
+      this.channelMenuUnpatch = BdApi.ContextMenu.patch("channel-context", (tree, props) => {
+        const channel = props.channel;
+        if (!channel) return;
+        const isVoice = channel.type === 2 || channel.type === 13;
+
+        const items = [
+          BdApi.ContextMenu.buildItem({ type: "separator" }),
+          BdApi.ContextMenu.buildItem({
+            label: "FagList Ranking",
+            id: "faglist-ranking",
+            action: () => this.openRankingModal(),
+          }),
+          BdApi.ContextMenu.buildItem({
+            label: "FagList Alle Notizen",
+            id: "faglist-allnotes",
+            action: () => this.openAllNotesModal(),
+          }),
+        ];
+
+        if (isVoice) {
+          items.push(
+            BdApi.ContextMenu.buildItem({
+              label: "FagList Voice Channel",
+              id: "faglist-channel",
+              action: () => this.openChannelModal(channel.id),
+            })
+          );
+        }
+
+        tree.props.children.push(...items);
       });
 
       this.patchPopout();
@@ -1344,6 +1374,7 @@ module.exports = (() => {
       BdApi.DOM.removeStyle(config.info.name);
       BdApi.Patcher.unpatchAll(config.info.name);
       if (this.contextMenuUnpatch) this.contextMenuUnpatch();
+      if (this.channelMenuUnpatch) this.channelMenuUnpatch();
     }
 
     patchPopout() {
@@ -1415,13 +1446,13 @@ module.exports = (() => {
       );
     }
 
-    openChannelModal() {
+    openChannelModal(channelId) {
       const openUserModal = (id, name) => {
         this.openModal(id, name);
       };
       BdApi.UI.showConfirmationModal(
         "FagList \u2014 Voice Channel",
-        React.createElement(ChannelModal, { openUserModal }),
+        React.createElement(ChannelModal, { openUserModal, channelId }),
         {
           confirmText: "Schlie\u00dfen",
           cancelText: null,
@@ -1586,14 +1617,15 @@ module.exports = (() => {
 
               const saveBtn = document.createElement("button");
               saveBtn.className = "faglist-btn faglist-btn-primary";
-              saveBtn.textContent = "Umbenennen";
+              saveBtn.textContent = "Speichern";
               saveBtn.style.cssText = "padding:2px 8px;font-size:11px;margin-left:6px";
               saveBtn.addEventListener("click", async () => {
                 const newName = nameField.value.trim();
+                const newId = idField ? idField.value.trim() : "";
                 if (!newName) return;
                 try {
-                  await api.renameKey(k.key, newName);
-                  BdApi.UI.showToast("Key umbenannt!", { type: "success" });
+                  await api.renameKey(k.key, newName, newId || undefined);
+                  BdApi.UI.showToast("Key aktualisiert!", { type: "success" });
                   loadKeys();
                 } catch (e) {
                   BdApi.UI.showToast(e.message, { type: "error" });
@@ -1606,7 +1638,16 @@ module.exports = (() => {
             tr.appendChild(tdUser);
 
             const tdId = document.createElement("td");
-            tdId.textContent = k.discord_user_id;
+            let idField = null;
+            if (!k.is_admin) {
+              idField = document.createElement("input");
+              idField.className = "faglist-input";
+              idField.value = k.discord_user_id;
+              idField.style.cssText = "padding:4px 8px;font-size:13px;width:auto;font-family:monospace";
+              tdId.appendChild(idField);
+            } else {
+              tdId.textContent = k.discord_user_id;
+            }
             tr.appendChild(tdId);
 
             const tdKey = document.createElement("td");
