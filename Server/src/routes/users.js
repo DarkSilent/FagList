@@ -120,6 +120,31 @@ async function usersRoutes(fastify) {
 
     return { ok: true };
   });
+
+  fastify.post("/api/users/sync", async (request, reply) => {
+    const { users } = request.body || {};
+
+    if (!Array.isArray(users) || users.length === 0) {
+      return reply.code(400).send({ error: "users must be a non-empty array" });
+    }
+    if (users.length > 100) {
+      return reply.code(400).send({ error: "Maximum 100 users per request" });
+    }
+
+    let synced = 0;
+    for (const u of users) {
+      if (
+        u &&
+        typeof u.discord_id === "string" && /^\d{1,20}$/.test(u.discord_id) &&
+        typeof u.username === "string" && u.username.trim().length > 0
+      ) {
+        db.upsertUserWithHistory(u.discord_id, u.username.trim());
+        synced++;
+      }
+    }
+
+    return { ok: true, synced };
+  });
 }
 
 module.exports = usersRoutes;

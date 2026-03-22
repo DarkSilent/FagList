@@ -2,7 +2,7 @@ const db = require("../db");
 const authHook = require("../auth");
 
 const getNotes = db.prepare(`
-  SELECT n.id, n.author_discord_id, COALESCE(u.username, a.username, n.author_discord_id) as author_username,
+  SELECT n.id, n.author_discord_id, COALESCE(NULLIF(u.username, ''), NULLIF(a.username, ''), n.author_discord_id) as author_username,
          n.content, n.updated_at
   FROM notes n
   LEFT JOIN users u ON u.discord_id = n.author_discord_id

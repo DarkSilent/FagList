@@ -581,7 +581,49 @@ module.exports = (() => {
       background: transparent;
       overflow: hidden;
     }
-    .faglist-content-header {\n      display: flex;\n      align-items: center;\n      gap: 16px;\n      font-size: 20px;\n      font-weight: 700;\n      color: var(--header-primary);\n      padding: 60px 40px 20px;\n      margin: 0;\n      flex-shrink: 0;\n    }
+    .faglist-content-header {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--header-primary);
+      padding: 60px 40px 20px;
+      margin: 0;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .faglist-content-header-search {
+      flex-shrink: 0;
+      position: relative;
+    }
+    .faglist-content-header-search input {
+      width: 240px;
+      box-sizing: border-box;
+      padding: 8px 34px 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--brand-500, #5865f2);
+      background: var(--background-tertiary);
+      color: var(--text-normal);
+      font-size: 14px;
+      font-weight: 400;
+      outline: none;
+      transition: background 0.15s;
+    }
+    .faglist-content-header-search input::placeholder {
+      color: var(--text-muted);
+    }
+    .faglist-content-header-search input:focus {
+      border-color: var(--brand-400, #7983f5);
+      background: var(--background-secondary);
+      box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
+    }
+    .faglist-content-header-search .faglist-search-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
     .faglist-content-body {
       flex: 1;
       overflow-y: auto;
@@ -645,17 +687,15 @@ module.exports = (() => {
     }
     .faglist-search-wrap {
       position: relative;
-      flex: 1;
-      max-width: 320px;
-      margin-left: auto;
+      padding: 0 12px 12px;
     }
     .faglist-search-input {
       width: 100%;
       box-sizing: border-box;
-      padding: 7px 34px 7px 12px;
+      padding: 8px 34px 8px 12px;
       border-radius: 6px;
-      border: none;
-      background: var(--background-secondary);
+      border: 1px solid var(--brand-500, #5865f2);
+      background: var(--background-tertiary);
       color: var(--text-normal);
       font-size: 14px;
       font-weight: 400;
@@ -666,7 +706,9 @@ module.exports = (() => {
       color: var(--text-muted);
     }
     .faglist-search-input:focus {
-      background: var(--background-tertiary);
+      border-color: var(--brand-400, #7983f5);
+      background: var(--background-secondary);
+      box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
     }
     .faglist-search-clear {
       position: absolute;
@@ -816,7 +858,29 @@ module.exports = (() => {
       }),
     searchUsers: (query) =>
       apiFetch(`/api/users/search?q=${encodeURIComponent(query)}`),
+    syncUsers: (users) =>
+      apiFetch("/api/users/sync", {
+        method: "POST",
+        body: JSON.stringify({ users }),
+      }),
   };
+
+  /* ── Username sync helper ───────────────────────────────── */
+  function syncUsernames(ids) {
+    try {
+      const UserStore = BdApi.Webpack.getStore("UserStore");
+      if (!UserStore) return;
+      const toSync = [];
+      for (const id of ids) {
+        const user = UserStore.getUser(id);
+        if (user) {
+          const name = user.globalName || user.username;
+          if (name && name !== id) toSync.push({ discord_id: id, username: name });
+        }
+      }
+      if (toSync.length > 0) api.syncUsers(toSync).catch(() => {});
+    } catch (_) {}
+  }
 
   /* ── React helpers ──────────────────────────────────────── */
   const React = BdApi.React;
@@ -1222,6 +1286,9 @@ module.exports = (() => {
         setError(null);
         const data = await api.getRanking();
         setRanking(data.ranking);
+
+        const ids = data.ranking.map(r => r.discord_id);
+        if (ids.length > 0) syncUsernames(ids);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -1346,6 +1413,23 @@ module.exports = (() => {
       tab === "notes"
         ? React.createElement(NotesTab, { targetId, targetName })
         : React.createElement(RoundsTab, { targetId, targetName })
+    );
+  }
+
+  /* ── Search Page Component ──────────────────────────────── */
+  function SearchPage({ initialQuery, onSelectUser }) {
+    const [localQuery, setLocalQuery] = useState(initialQuery || "");
+
+    useEffect(() => {
+      if (initialQuery) setLocalQuery(initialQuery);
+    }, [initialQuery]);
+
+    return React.createElement(
+      "div",
+      null,
+      localQuery.trim().length >= 2
+        ? React.createElement(SearchResults, { query: localQuery, onSelectUser })
+        : React.createElement("div", { className: "faglist-empty" }, "Gib mindestens 2 Zeichen ein, um zu suchen.")
     );
   }
 
@@ -1488,6 +1572,7 @@ module.exports = (() => {
       setPreviousPage(page);
       setSelectedUser({ id, name });
       setPage("user");
+      syncUsernames([id]);
     }, [page]);
 
     const goBack = useCallback(() => {
@@ -1504,14 +1589,18 @@ module.exports = (() => {
     const navItems = [
       { id: "ranking", icon: "\uD83C\uDFC6", label: "Ranking" },
       { id: "allnotes", icon: "\uD83D\uDC65", label: "Alle Benutzer" },
+      { id: "search", icon: "\uD83D\uDD0D", label: "Suche" },
       { id: "channel", icon: "\uD83D\uDD0A", label: "Voice Channel" },
     ];
       if (isAdmin) {
         navItems.push({ id: "admin", icon: "\u2699\uFE0F", label: "Admin" });
       }
 
+    const [searchPageQuery, setSearchPageQuery] = useState("");
+
     let contentTitle = "";
     let contentBody = null;
+    let contentHeaderExtra = null;
 
     switch (page) {
       case "admin":
@@ -1525,6 +1614,26 @@ module.exports = (() => {
       case "allnotes":
         contentTitle = "Alle Benutzer";
         contentBody = React.createElement(AllNotesTab, { openUserModal: openUserPage });
+        break;
+      case "search":
+        contentTitle = "Suche";
+        contentHeaderExtra = React.createElement(
+          "div",
+          { className: "faglist-content-header-search" },
+          React.createElement("input", {
+            type: "text",
+            placeholder: "Benutzer suchen\u2026",
+            value: searchPageQuery,
+            onChange: (e) => setSearchPageQuery(e.target.value),
+            autoFocus: true,
+          }),
+          searchPageQuery && React.createElement(
+            "button",
+            { className: "faglist-search-clear", onClick: () => setSearchPageQuery("") },
+            "\u2715"
+          )
+        );
+        contentBody = React.createElement(SearchPage, { initialQuery: searchPageQuery, onSelectUser: (id, name) => { openUserPage(id, name); } });
         break;
       case "channel":
         contentTitle = "Voice Channel";
@@ -1575,6 +1684,30 @@ module.exports = (() => {
         "div",
         { className: "faglist-sidebar" },
         React.createElement("div", { className: "faglist-sidebar-title" }, "FagList"),
+        React.createElement(
+          "div",
+          { className: "faglist-search-wrap" },
+          React.createElement("input", {
+            className: "faglist-search-input",
+            type: "text",
+            placeholder: "Benutzer suchen\u2026",
+            value: searchQuery,
+            onChange: (e) => setSearchQuery(e.target.value),
+            onKeyDown: (e) => {
+              if (e.key === "Enter" && searchQuery.trim().length >= 1) {
+                setSearchPageQuery(searchQuery.trim());
+                setPage("search");
+                setSelectedUser(null);
+                setSearchQuery("");
+              }
+            },
+          }),
+          searchQuery && React.createElement(
+            "button",
+            { className: "faglist-search-clear", onClick: () => setSearchQuery("") },
+            "\u2715"
+          )
+        ),
         navItems.map((item) =>
           React.createElement(
             "button",
@@ -1641,33 +1774,14 @@ module.exports = (() => {
       React.createElement(
         "div",
         { className: "faglist-content-area" },
-        React.createElement(
-          "div",
-          { className: "faglist-content-header" },
+        React.createElement("div", { className: "faglist-content-header" },
           contentTitle,
-          React.createElement(
-            "div",
-            { className: "faglist-search-wrap" },
-            React.createElement("input", {
-              className: "faglist-search-input",
-              type: "text",
-              placeholder: "Benutzer suchen\u2026",
-              value: searchQuery,
-              onChange: (e) => setSearchQuery(e.target.value),
-            }),
-            searchQuery && React.createElement(
-              "button",
-              { className: "faglist-search-clear", onClick: () => setSearchQuery("") },
-              "\u2715"
-            )
-          )
+          contentHeaderExtra
         ),
         React.createElement(
           "div",
           { className: "faglist-content-body" },
-          searchQuery.trim().length >= 2
-            ? React.createElement(SearchResults, { query: searchQuery, onSelectUser: (id, name) => { setSearchQuery(""); openUserPage(id, name); } })
-            : contentBody
+          contentBody
         )
       )
       )
@@ -1849,6 +1963,8 @@ module.exports = (() => {
 
         result.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
         setUsers(result);
+
+        syncUsernames(ids);
       } catch (e) {
         setError(e.message);
       } finally {

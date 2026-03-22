@@ -4,7 +4,7 @@ const authHook = require("../auth");
 const getRanking = db.prepare(`
   SELECT
     r.target_discord_id as discord_id,
-    COALESCE(u.username, r.target_discord_id) as username,
+    COALESCE(NULLIF(u.username, ''), r.target_discord_id) as username,
     ROUND(AVG(r.rating), 2) as avg_rating,
     COUNT(r.id) as total_rounds,
     (SELECT COUNT(*) FROM notes n WHERE n.target_discord_id = r.target_discord_id) as total_notes
