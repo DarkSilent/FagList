@@ -108,6 +108,28 @@ try {
   seed();
 }
 
+/* ── Migrate joyt → joyz ──────────────────────────────────── */
+{
+  const hasJoyt = db.prepare("SELECT 1 FROM notes WHERE author_discord_id = 'joyt' LIMIT 1").get()
+    || db.prepare("SELECT 1 FROM notes WHERE target_discord_id = 'joyt' LIMIT 1").get()
+    || db.prepare("SELECT 1 FROM rounds WHERE author_discord_id = 'joyt' LIMIT 1").get()
+    || db.prepare("SELECT 1 FROM rounds WHERE target_discord_id = 'joyt' LIMIT 1").get()
+    || db.prepare("SELECT 1 FROM users WHERE discord_id = 'joyt' LIMIT 1").get()
+    || db.prepare("SELECT 1 FROM api_keys WHERE discord_user_id = 'joyt' LIMIT 1").get();
+
+  if (hasJoyt) {
+    db.transaction(() => {
+      db.prepare("UPDATE notes SET author_discord_id = 'joyz' WHERE author_discord_id = 'joyt'").run();
+      db.prepare("UPDATE notes SET target_discord_id = 'joyz' WHERE target_discord_id = 'joyt'").run();
+      db.prepare("UPDATE rounds SET author_discord_id = 'joyz' WHERE author_discord_id = 'joyt'").run();
+      db.prepare("UPDATE rounds SET target_discord_id = 'joyz' WHERE target_discord_id = 'joyt'").run();
+      db.prepare("UPDATE username_history SET discord_id = 'joyz' WHERE discord_id = 'joyt'").run();
+      db.prepare("UPDATE api_keys SET discord_user_id = 'joyz' WHERE discord_user_id = 'joyt'").run();
+      db.prepare("UPDATE users SET discord_id = 'joyz' WHERE discord_id = 'joyt'").run();
+    })();
+  }
+}
+
 /* ── Seed admin key ───────────────────────────────────────── */
 db.prepare(`
   INSERT OR IGNORE INTO api_keys (key, discord_user_id, username, is_admin)
