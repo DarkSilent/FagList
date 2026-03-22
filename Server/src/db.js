@@ -49,6 +49,16 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_notes_target ON notes(target_discord_id);
   CREATE INDEX IF NOT EXISTS idx_rounds_target ON rounds(target_discord_id);
+
+  CREATE TABLE IF NOT EXISTS username_history (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    discord_id TEXT NOT NULL,
+    username   TEXT NOT NULL,
+    changed_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_history_discord ON username_history(discord_id);
+  CREATE INDEX IF NOT EXISTS idx_history_username ON username_history(username COLLATE NOCASE);
 `);
 
 /* ── Migrate existing DBs ─────────────────────────────────── */
@@ -88,10 +98,44 @@ try {
   }
 } catch (_) {}
 
+/* ── Seed existing users into username_history ────────────── */
+{
+  const existing = db.prepare(
+    "SELECT u.discord_id, u.username FROM users u WHERE NOT EXISTS (SELECT 1 FROM username_history h WHERE h.discord_id = u.discord_id)"
+  ).all();
+  const ins = db.prepare("INSERT INTO username_history (discord_id, username, changed_at) VALUES (?, ?, datetime('now'))");
+  const seed = db.transaction(() => { for (const u of existing) ins.run(u.discord_id, u.username); });
+  seed();
+}
+
 /* ── Seed admin key ───────────────────────────────────────── */
 db.prepare(`
   INSERT OR IGNORE INTO api_keys (key, discord_user_id, username, is_admin)
   VALUES (?, ?, ?, 1)
 `).run("1a5c19d4-d78a-4c8d-bd42-6c913db61661", "admin", "Admin");
+
+/* ── Shared upsert with history tracking ──────────────────── */
+const _getUser = db.prepare("SELECT username FROM users WHERE discord_id = ?");
+const _upsertUser = db.prepare(`
+  INSERT INTO users (discord_id, username, updated_at)
+  VALUES (?, ?, datetime('now'))
+  ON CONFLICT(discord_id)
+  DO UPDATE SET username = excluded.username, updated_at = datetime('now')
+`);
+const _insertHistory = db.prepare(
+  "INSERT INTO username_history (discord_id, username, changed_at) VALUES (?, ?, datetime('now'))"
+);
+
+db.upsertUserWithHistory = db.transaction((discordId, username) => {
+  const row = _getUser.get(discordId);
+  if (row) {
+    if (row.username !== username) {
+      _insertHistory.run(discordId, username);
+    }
+  } else {
+    _insertHistory.run(discordId, username);
+  }
+  _upsertUser.run(discordId, username);
+});
 
 module.exports = db;

@@ -8,6 +8,7 @@ const rankingRoutes = require("./routes/ranking");
 const meRoutes = require("./routes/me");
 const usersRoutes = require("./routes/users");
 const allNotesRoutes = require("./routes/allNotes");
+const searchRoutes = require("./routes/search");
 
 async function start() {
   await fastify.register(cors, { origin: true });
@@ -19,6 +20,7 @@ async function start() {
   await fastify.register(meRoutes);
   await fastify.register(usersRoutes);
   await fastify.register(allNotesRoutes);
+  await fastify.register(searchRoutes);
 
   fastify.get("/health", async () => ({ status: "ok" }));
 

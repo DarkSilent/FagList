@@ -22,13 +22,6 @@ const deleteNote = db.prepare(
   "DELETE FROM notes WHERE target_discord_id = ? AND author_discord_id = ?"
 );
 
-const upsertUser = db.prepare(`
-  INSERT INTO users (discord_id, username, updated_at)
-  VALUES (?, ?, datetime('now'))
-  ON CONFLICT(discord_id)
-  DO UPDATE SET username = excluded.username, updated_at = datetime('now')
-`);
-
 async function notesRoutes(fastify) {
   fastify.addHook("onRequest", authHook);
 
@@ -47,7 +40,7 @@ async function notesRoutes(fastify) {
     }
 
     if (target_username && typeof target_username === "string") {
-      upsertUser.run(discordId, target_username.trim());
+      db.upsertUserWithHistory(discordId, target_username.trim());
     }
 
     upsertNote.run(discordId, request.discordUserId, content.trim());

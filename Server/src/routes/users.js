@@ -7,13 +7,6 @@ const getAllUsers = db.prepare(
 
 const getUser = db.prepare("SELECT discord_id, username FROM users WHERE discord_id = ?");
 
-const upsertUser = db.prepare(`
-  INSERT INTO users (discord_id, username, updated_at)
-  VALUES (?, ?, datetime('now'))
-  ON CONFLICT(discord_id)
-  DO UPDATE SET username = excluded.username, updated_at = datetime('now')
-`);
-
 const updateUserDiscordId = db.prepare("UPDATE users SET discord_id = ?, username = ?, updated_at = datetime('now') WHERE discord_id = ?");
 const updateNotesTarget = db.prepare("UPDATE notes SET target_discord_id = ? WHERE target_discord_id = ?");
 const updateNotesAuthor = db.prepare("UPDATE notes SET author_discord_id = ? WHERE author_discord_id = ?");
@@ -44,7 +37,7 @@ async function usersRoutes(fastify) {
       return reply.code(400).send({ error: "username is required" });
     }
 
-    upsertUser.run(discord_id.trim(), username.trim());
+    db.upsertUserWithHistory(discord_id.trim(), username.trim());
     return { ok: true };
   });
 
@@ -122,7 +115,7 @@ async function usersRoutes(fastify) {
       });
       migrate();
     } else {
-      upsertUser.run(discordId, trimmedName);
+      db.upsertUserWithHistory(discordId, trimmedName);
     }
 
     return { ok: true };

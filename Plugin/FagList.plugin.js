@@ -581,14 +581,7 @@ module.exports = (() => {
       background: transparent;
       overflow: hidden;
     }
-    .faglist-content-header {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--header-primary);
-      padding: 60px 40px 20px;
-      margin: 0;
-      flex-shrink: 0;
-    }
+    .faglist-content-header {\n      display: flex;\n      align-items: center;\n      gap: 16px;\n      font-size: 20px;\n      font-weight: 700;\n      color: var(--header-primary);\n      padding: 60px 40px 20px;\n      margin: 0;\n      flex-shrink: 0;\n    }
     .faglist-content-body {
       flex: 1;
       overflow-y: auto;
@@ -649,6 +642,100 @@ module.exports = (() => {
     .faglist-back-btn:hover {
       background: var(--background-modifier-hover);
       color: var(--text-normal);
+    }
+    .faglist-search-wrap {
+      position: relative;
+      flex: 1;
+      max-width: 320px;
+      margin-left: auto;
+    }
+    .faglist-search-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 7px 34px 7px 12px;
+      border-radius: 6px;
+      border: none;
+      background: var(--background-secondary);
+      color: var(--text-normal);
+      font-size: 14px;
+      font-weight: 400;
+      outline: none;
+      transition: background 0.15s;
+    }
+    .faglist-search-input::placeholder {
+      color: var(--text-muted);
+    }
+    .faglist-search-input:focus {
+      background: var(--background-tertiary);
+    }
+    .faglist-search-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--interactive-normal);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .faglist-search-clear:hover {
+      color: var(--interactive-hover);
+      background: var(--background-modifier-hover);
+    }
+    .faglist-search-results {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .faglist-search-result-card {
+      background: var(--background-secondary);
+      border-radius: 8px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .faglist-search-result-card:hover {
+      background: var(--background-modifier-hover);
+    }
+    .faglist-search-result-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--header-primary);
+      margin-bottom: 4px;
+    }
+    .faglist-search-history {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .faglist-search-history-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--background-tertiary);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .faglist-search-highlight {
+      color: var(--text-link);
+      font-weight: 600;
+    }
+    .faglist-search-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 40px 0;
     }
   `;
 
@@ -727,6 +814,8 @@ module.exports = (() => {
         method: "POST",
         body: JSON.stringify({ ids }),
       }),
+    searchUsers: (query) =>
+      apiFetch(`/api/users/search?q=${encodeURIComponent(query)}`),
   };
 
   /* ── React helpers ──────────────────────────────────────── */
@@ -1260,7 +1349,89 @@ module.exports = (() => {
     );
   }
 
-  /* ── Fullscreen Panel Component ─────────────────────────── */
+  /* ── Search Results Component ─────────────────────────────── */
+  function SearchResults({ query, onSelectUser }) {
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+      if (!query || query.trim().length < 2) {
+        setResults([]);
+        return;
+      }
+      let cancelled = false;
+      const timer = setTimeout(async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const data = await api.searchUsers(query.trim());
+          if (!cancelled) setResults(data.results || []);
+        } catch (e) {
+          if (!cancelled) setError(e.message);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      }, 300);
+      return () => { cancelled = true; clearTimeout(timer); };
+    }, [query]);
+
+    function highlightMatch(text, q) {
+      if (!q) return text;
+      const idx = text.toLowerCase().indexOf(q.toLowerCase());
+      if (idx === -1) return text;
+      return React.createElement(
+        React.Fragment,
+        null,
+        text.slice(0, idx),
+        React.createElement("span", { className: "faglist-search-highlight" }, text.slice(idx, idx + q.length)),
+        text.slice(idx + q.length)
+      );
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "";
+      const d = new Date(iso + "Z");
+      return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+
+    if (loading) return React.createElement("div", { className: "faglist-empty" }, "Suche\u2026");
+    if (error) return React.createElement("div", { className: "faglist-error" }, error);
+    if (query && query.trim().length >= 2 && results.length === 0) {
+      return React.createElement("div", { className: "faglist-search-empty" }, "Keine Ergebnisse f\u00fcr \u201E" + query + "\u201C");
+    }
+
+    return React.createElement(
+      "div",
+      { className: "faglist-search-results" },
+      results.map((r) =>
+        React.createElement(
+          "div",
+          {
+            key: r.discord_id,
+            className: "faglist-search-result-card",
+            onClick: () => onSelectUser(r.discord_id, r.username),
+          },
+          React.createElement("div", { className: "faglist-search-result-name" }, highlightMatch(r.username, query)),
+          r.history && r.history.length > 0 && React.createElement(
+            "div",
+            { className: "faglist-search-history" },
+            r.history.map((h, i) =>
+              React.createElement(
+                "span",
+                { key: i, className: "faglist-search-history-tag" },
+                highlightMatch(h.username, query),
+                " \u00B7 ",
+                formatDate(h.changed_at)
+              )
+            )
+          )
+        )
+      )
+    );
+  }
+
+  /* \u2500\u2500 Fullscreen Panel Component \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
   function FagListPanel({ initialPage, initialUser, initialChannelId, onClose }) {
     const [page, setPage] = useState(initialPage || "ranking");
     const [selectedUser, setSelectedUser] = useState(initialUser || null);
@@ -1269,6 +1440,7 @@ module.exports = (() => {
     const [activeChannels, setActiveChannels] = useState([]);
     const [isAdmin, setIsAdmin] = useState(false);
     const [previousPage, setPreviousPage] = useState("ranking");
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
       api.getMe().then(me => setIsAdmin(!!me.is_admin)).catch(() => {});
@@ -1469,8 +1641,34 @@ module.exports = (() => {
       React.createElement(
         "div",
         { className: "faglist-content-area" },
-        React.createElement("div", { className: "faglist-content-header" }, contentTitle),
-        React.createElement("div", { className: "faglist-content-body" }, contentBody)
+        React.createElement(
+          "div",
+          { className: "faglist-content-header" },
+          contentTitle,
+          React.createElement(
+            "div",
+            { className: "faglist-search-wrap" },
+            React.createElement("input", {
+              className: "faglist-search-input",
+              type: "text",
+              placeholder: "Benutzer suchen\u2026",
+              value: searchQuery,
+              onChange: (e) => setSearchQuery(e.target.value),
+            }),
+            searchQuery && React.createElement(
+              "button",
+              { className: "faglist-search-clear", onClick: () => setSearchQuery("") },
+              "\u2715"
+            )
+          )
+        ),
+        React.createElement(
+          "div",
+          { className: "faglist-content-body" },
+          searchQuery.trim().length >= 2
+            ? React.createElement(SearchResults, { query: searchQuery, onSelectUser: (id, name) => { setSearchQuery(""); openUserPage(id, name); } })
+            : contentBody
+        )
       )
       )
     );

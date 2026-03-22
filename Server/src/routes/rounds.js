@@ -30,13 +30,6 @@ const deleteRoundAdmin = db.prepare(
 
 const getRoundById = db.prepare("SELECT * FROM rounds WHERE id = ?");
 
-const upsertUser = db.prepare(`
-  INSERT INTO users (discord_id, username, updated_at)
-  VALUES (?, ?, datetime('now'))
-  ON CONFLICT(discord_id)
-  DO UPDATE SET username = excluded.username, updated_at = datetime('now')
-`);
-
 async function roundsRoutes(fastify) {
   fastify.addHook("onRequest", authHook);
 
@@ -60,7 +53,7 @@ async function roundsRoutes(fastify) {
     }
 
     if (target_username && typeof target_username === "string") {
-      upsertUser.run(discordId, target_username.trim());
+      db.upsertUserWithHistory(discordId, target_username.trim());
     }
 
     const result = insertRound.run(
