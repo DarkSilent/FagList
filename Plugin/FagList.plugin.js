@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @name FagList
  * @author DarkSilent
  * @version 1.1.0
@@ -25,6 +25,8 @@ module.exports = (() => {
 
   /* ── CSS ─────────────────────────────────────────────────── */
   const css = `
+    .faglist-panel-icon-btn { background: transparent; border: none; color: var(--interactive-normal); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; padding: 0; }
+    .faglist-panel-icon-btn:hover { color: var(--interactive-hover); }
     .faglist-modal-root {
       color: var(--text-normal);
       padding: 16px 20px;
@@ -1218,6 +1220,22 @@ module.exports = (() => {
   /* ── Modal Component (User — still used inside panel) ──── */
   function FagListModal({ targetId, targetName }) {
     const [tab, setTab] = useState("notes");
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 850);
+
+    useEffect(() => {
+      const handleResize = () => setIsMobile(window.innerWidth < 850);
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    if (!isMobile) {
+      return React.createElement(
+        "div",
+        { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" } },
+        React.createElement("div", null, React.createElement(NotesTab, { targetId, targetName })),
+        React.createElement("div", null, React.createElement(RoundsTab, { targetId, targetName }))
+      );
+    }
 
     return React.createElement(
       "div",
@@ -1250,6 +1268,7 @@ module.exports = (() => {
     const [currentVoiceUsers, setCurrentVoiceUsers] = useState([]);
     const [activeChannels, setActiveChannels] = useState([]);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [previousPage, setPreviousPage] = useState("ranking");
 
     useEffect(() => {
       api.getMe().then(me => setIsAdmin(!!me.is_admin)).catch(() => {});
@@ -1294,14 +1313,15 @@ module.exports = (() => {
     }, [channelId]);
 
     const openUserPage = useCallback((id, name) => {
+      setPreviousPage(page);
       setSelectedUser({ id, name });
       setPage("user");
-    }, []);
+    }, [page]);
 
     const goBack = useCallback(() => {
       setSelectedUser(null);
-      setPage("ranking");
-    }, []);
+      setPage(previousPage);
+    }, [previousPage]);
 
     useEffect(() => {
       const onKey = (e) => { if (e.key === "Escape") onClose(); };
@@ -1311,20 +1331,27 @@ module.exports = (() => {
 
     const navItems = [
       { id: "ranking", icon: "\uD83C\uDFC6", label: "Ranking" },
-      { id: "allnotes", icon: "\uD83D\uDDD2\uFE0F", label: "Alle Notizen" },
+      { id: "allnotes", icon: "\uD83D\uDC65", label: "Alle Benutzer" },
       { id: "channel", icon: "\uD83D\uDD0A", label: "Voice Channel" },
     ];
+      if (isAdmin) {
+        navItems.push({ id: "admin", icon: "\u2699\uFE0F", label: "Admin" });
+      }
 
     let contentTitle = "";
     let contentBody = null;
 
     switch (page) {
+      case "admin":
+        contentTitle = "Admin Panel";
+        contentBody = React.createElement(AdminTab);
+        break;
       case "ranking":
         contentTitle = "Ranking";
         contentBody = React.createElement(OverviewTab, { openUserModal: openUserPage });
         break;
       case "allnotes":
-        contentTitle = "Alle Notizen";
+        contentTitle = "Alle Benutzer";
         contentBody = React.createElement(AllNotesTab, { openUserModal: openUserPage });
         break;
       case "channel":
@@ -1452,6 +1479,7 @@ module.exports = (() => {
   /* ── All Notes Modal ─────────────────────────────────────── */
   function AllNotesTab({ openUserModal }) {
     const [notes, setNotes] = useState([]);
+    const [ranking, setRanking] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -1459,8 +1487,9 @@ module.exports = (() => {
       try {
         setLoading(true);
         setError(null);
-        const data = await api.getAllNotes();
-        setNotes(data.notes);
+        const [notesData, rankData] = await Promise.all([api.getAllNotes(), api.getRanking()]);
+        setNotes(notesData.notes);
+        setRanking(rankData.ranking);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -1485,24 +1514,42 @@ module.exports = (() => {
 
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
 
+    const Stars = ({ value }) => {
+      return React.createElement(
+        "div",
+        { className: "faglist-stars" },
+        [1, 2, 3, 4, 5].map((star) =>
+          React.createElement(
+            "span",
+            { key: star, style: { color: star <= value ? "#f1c40f" : "#4f545c", fontSize: "16px" } },
+            "\u2605"
+          )
+        )
+      );
+    };
+
     return React.createElement(
       "div",
       null,
       error && React.createElement("div", { className: "faglist-error" }, error),
-      React.createElement("div", { className: "faglist-section-title" }, `Nutzer mit Notizen (${sorted.length})`),
+      React.createElement("div", { className: "faglist-section-title" }, `Alle Benutzer (${sorted.length})`),
       sorted.length === 0
-        ? React.createElement("div", { className: "faglist-empty" }, "Keine Notizen vorhanden.")
+        ? React.createElement("div", { className: "faglist-empty" }, "Keine Benutzer vorhanden.")
         : React.createElement(
             "div",
             { className: "faglist-notes-grid" },
-            sorted.map(([discordId, group]) =>
-              React.createElement(
+            sorted.map(([discordId, group]) => {
+              const rankUser = ranking.find(r => r.discord_id === discordId);
+              const rating = rankUser?.avg_rating || 0;
+              const rounds = rankUser?.total_rounds || 0;
+
+              return React.createElement(
                 "div",
                 { key: discordId, className: "faglist-notes-grid-card" },
                 React.createElement(
                   "div",
-                  { 
-                    className: "faglist-notes-grid-header", 
+                  {
+                    className: "faglist-notes-grid-header",
                     onClick: () => openUserModal(discordId, group.name)
                   },
                   React.createElement(
@@ -1510,7 +1557,13 @@ module.exports = (() => {
                     null,
                     resolveUsername(discordId) !== discordId ? resolveUsername(discordId) : group.name
                   ),
-                  React.createElement("span", { className: "faglist-group-count" }, `${group.notes.length} Notiz${group.notes.length !== 1 ? "en" : ""}`)
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                    React.createElement(Stars, { value: Math.round(rating) }),
+                    React.createElement("span", { className: "faglist-group-count", style: { marginLeft: 4 } }, `${rounds} Runden`),
+                    React.createElement("span", { className: "faglist-group-count" }, `${group.notes.length} Notiz${group.notes.length !== 1 ? "en" : ""}`)
+                  )
                 ),
                 group.notes.map((n) =>
                   React.createElement(
@@ -1521,13 +1574,13 @@ module.exports = (() => {
                     n.updated_at && React.createElement("div", { className: "faglist-note-date" }, `Zuletzt bearbeitet: ${fmtDate(n.updated_at)}`)
                   )
                 )
-              )
-            )
+              );
+            })
           )
     );
   }
 
-    /* ── Channel Tab ─────────────────────────────────────────── */
+  /* ── Channel Tab ─────────────────────────────────────────── */
   function ChannelTab({ openUserModal, channelId: propChannelId }) {
     const [users, setUsers] = useState([]);
     const [channelName, setChannelName] = useState("");
@@ -1677,68 +1730,53 @@ module.exports = (() => {
   /* ── Main Plugin Class ──────────────────────────────────── */
   return class FagList {
     start() {
+
+      this.panelObserver = new MutationObserver(() => this.injectUserPanelButton());
+      this.panelObserver.observe(document.body, { childList: true, subtree: true });
+      this.injectUserPanelButton();
+
       BdApi.DOM.addStyle(config.info.name, css);
 
       this.contextMenuUnpatch = BdApi.ContextMenu.patch("user-context", (tree, props) => {
-        const user = props.user;
-        if (!user) return;
+          const user = props.user;
+          if (!user) return;
 
-        tree.props.children.push(
-          BdApi.ContextMenu.buildItem({ type: "separator" }),
-          BdApi.ContextMenu.buildItem({
-            label: "FagList anzeigen",
-            id: "faglist-show",
-            action: () => this.openModal(user.id, user.globalName || user.username || user.id),
-          }),
-          BdApi.ContextMenu.buildItem({
-            label: "FagList Ranking",
-            id: "faglist-ranking",
-            action: () => this.openRankingModal(),
-          }),
-          BdApi.ContextMenu.buildItem({
-            label: "FagList Alle Notizen",
-            id: "faglist-allnotes",
-            action: () => this.openAllNotesModal(),
-          })
-        );
-      });
-
-      this.channelMenuUnpatch = BdApi.ContextMenu.patch("channel-context", (tree, props) => {
-        const channel = props.channel;
-        if (!channel) return;
-        const isVoice = channel.type === 2 || channel.type === 13;
-
-        const items = [
-          BdApi.ContextMenu.buildItem({ type: "separator" }),
-          BdApi.ContextMenu.buildItem({
-            label: "FagList Ranking",
-            id: "faglist-ranking",
-            action: () => this.openRankingModal(),
-          }),
-          BdApi.ContextMenu.buildItem({
-            label: "FagList Alle Notizen",
-            id: "faglist-allnotes",
-            action: () => this.openAllNotesModal(),
-          }),
-        ];
-
-        if (isVoice) {
-          items.push(
+          tree.props.children.push(
+            BdApi.ContextMenu.buildItem({ type: "separator" }),
             BdApi.ContextMenu.buildItem({
-              label: "FagList Voice Channel",
-              id: "faglist-channel",
-              action: () => this.openChannelModal(channel.id),
+              label: "FagList",
+              id: "faglist-show",
+              action: () => this.openModal(user.id, user.globalName || user.username || user.id),
             })
           );
-        }
+        });
 
-        tree.props.children.push(...items);
-      });
+      this.channelMenuUnpatch = BdApi.ContextMenu.patch("channel-context", (tree, props) => {
+          const channel = props.channel;
+          if (!channel) return;
+          const isVoice = channel.type === 2 || channel.type === 13;
+
+          if (isVoice) {
+            tree.props.children.push(
+              BdApi.ContextMenu.buildItem({ type: "separator" }),
+              BdApi.ContextMenu.buildItem({
+                label: "FagList",
+                id: "faglist-channel",
+                action: () => this.openChannelModal(channel.id),
+              })
+            );
+          }
+        });
 
       this.patchPopout();
     }
 
-    stop() {
+    
+      stop() {
+        if (this.panelObserver) this.panelObserver.disconnect();
+        const btn = document.getElementById("faglist-user-panel-btn");
+        if (btn) btn.remove();
+
       BdApi.DOM.removeStyle(config.info.name);
       BdApi.Patcher.unpatchAll(config.info.name);
       if (this.contextMenuUnpatch) this.contextMenuUnpatch();
@@ -1773,7 +1811,34 @@ module.exports = (() => {
       });
     }
 
-    openPanel(page, opts = {}) {
+    
+      injectUserPanelButton() {
+        requestAnimationFrame(() => {
+          const panels = document.querySelector('section[class*="panels_"]');
+          if (!panels) return;
+          // Discord typically has 3 buttons (mic, headset, settings). We find the container that holds them.
+          const buttonContainers = panels.querySelectorAll('div[class*="flex_"]');
+          // Usually the one with buttons is the last or only flex container, but we can look for the settings button 
+          const settingsBtn = panels.querySelector('button[aria-label="Benutzereinstellungen"], button[aria-label="User Settings"]');
+          if (!settingsBtn) return;
+          
+          const container = settingsBtn.parentElement;
+          if (!container || document.getElementById("faglist-user-panel-btn")) return;
+          
+          const btn = document.createElement("button");
+          btn.id = "faglist-user-panel-btn";
+          btn.className = "faglist-panel-icon-btn";
+          btn.title = "FagList Alle Benutzer";
+          btn.innerHTML = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 8a7 7 0 1 1 14 0H5Z"/></svg>`;
+          btn.onclick = () => {
+            this.openAllNotesModal();
+          };
+          
+          container.insertBefore(btn, container.firstChild);
+        });
+      }
+
+      openPanel(page, opts = {}) {
       if (this._panelContainer) this.closePanel();
       const container = document.createElement("div");
       container.id = "faglist-panel-root";
@@ -1956,104 +2021,125 @@ module.exports = (() => {
   }
 
   function AdminTab() {
-    const [keys, setKeys] = useState([]);
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+      const [adminTab, setAdminTab] = useState('keys');
+      const [keys, setKeys] = useState([]);
+      const [users, setUsers] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
 
-    const [keyDiscordId, setKeyDiscordId] = useState("");
-    const [keyUsername, setKeyUsername] = useState("");
+      const [keyDiscordId, setKeyDiscordId] = useState('');
+      const [keyUsername, setKeyUsername] = useState('');
 
-    const [userDiscordId, setUserDiscordId] = useState("");
-    const [userUsername, setUserUsername] = useState("");
+      const [userDiscordId, setUserDiscordId] = useState('');
+      const [userUsername, setUserUsername] = useState('');
 
-    const loadData = useCallback(async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [k, u] = await Promise.all([api.getKeys(), api.getUsers()]);
-        setKeys(k.keys);
-        setUsers(u.users);
-      } catch (e) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    }, []);
+      const loadData = useCallback(async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const [kData, uData] = await Promise.all([api.getKeys(), api.getUsers()]);
+          setKeys(kData.keys || kData.api_keys || []);
+          setUsers(uData.users || []);
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setLoading(false);
+        }
+      }, []);
 
-    useEffect(() => { loadData(); }, [loadData]);
+      useEffect(() => { loadData(); }, [loadData]);
 
-    const handleCreateKey = async () => {
-      if (!keyDiscordId || !keyUsername) return;
-      try {
-        const res = await api.createKey(keyDiscordId.trim(), keyUsername.trim());
-        if (res.existing) BdApi.UI.showToast("Key existiert bereits", { type: "info" });
-        else BdApi.UI.showToast("Key erstellt!", { type: "success" });
-        setKeyDiscordId("");
-        setKeyUsername("");
-        loadData();
-      } catch (e) {
-        BdApi.UI.showToast(e.message, { type: "error" });
-      }
-    };
+      const handleCreateKey = async () => {
+        if (!keyDiscordId.trim() || !keyUsername.trim()) return;
+        try {
+          await api.createKey(keyDiscordId.trim(), keyUsername.trim());
+          setKeyDiscordId('');
+          setKeyUsername('');
+          loadData();
+        } catch (e) {
+          BdApi.UI.showToast(e.message, { type: 'error' });
+        }
+      };
 
-    const handleCreateUser = async () => {
-      if (!userDiscordId || !userUsername) return;
-      try {
-        await api.addUser(userDiscordId.trim(), userUsername.trim());
-        BdApi.UI.showToast("Nutzer hinzugefügt!", { type: "success" });
-        setUserDiscordId("");
-        setUserUsername("");
-        loadData();
-      } catch (e) {
-        BdApi.UI.showToast(e.message, { type: "error" });
-      }
-    };
+      const handleCreateUser = async () => {
+        if (!userDiscordId.trim() || !userUsername.trim()) return;
+        try {
+          await apiFetch('/api/users', { method: 'POST', body: JSON.stringify({ discord_id: userDiscordId.trim(), username: userUsername.trim() }) });
+          setUserDiscordId('');
+          setUserUsername('');
+          loadData();
+        } catch (e) {
+          BdApi.UI.showToast(e.message, { type: 'error' });
+        }
+      };
 
-    if (loading) return React.createElement("div", { className: "faglist-loading" }, "Laden...");
-    if (error) return React.createElement("div", { className: "faglist-error" }, error);
+      if (loading) return React.createElement('div', { className: 'faglist-loading' }, 'Laden...');
 
-    return React.createElement(
-      "div",
-      { className: "faglist-scroll-list" },
-      React.createElement("div", { className: "faglist-admin-section" },
-        React.createElement("h3", null, "🔑 API Keys"),
+      return React.createElement(
+        'div',
+        null,
+        error && React.createElement('div', { className: 'faglist-error' }, error),
         React.createElement(
-          "div",
-          { className: "faglist-admin-form", style: { marginBottom: "16px" } },
-          React.createElement("input", { className: "faglist-input", placeholder: "Discord User ID", value: keyDiscordId, onChange: e => setKeyDiscordId(e.target.value) }),
-          React.createElement("input", { className: "faglist-input", placeholder: "Username", value: keyUsername, onChange: e => setKeyUsername(e.target.value) }),
-          React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: handleCreateKey }, "Key erstellen")
+          'div',
+          { className: 'faglist-tabs' },
+          React.createElement(
+            'button',
+            { className: `faglist-tab${adminTab === 'keys' ? ' active' : ''}`, onClick: () => setAdminTab('keys') },
+            '\uD83D\uDDDD\uFE0F API Keys'
+          ),
+          React.createElement(
+            'button',
+            { className: `faglist-tab${adminTab === 'users' ? ' active' : ''}`, onClick: () => setAdminTab('users') },
+            '\uD83D\uDC65 Benutzer'
+          )
         ),
-        keys.length === 0 ? React.createElement("div", null, "Keine Keys vorhanden.") : React.createElement(
-          "table",
-          { className: "faglist-admin-table" },
-          React.createElement("thead", null, React.createElement("tr", null, 
-            React.createElement("th", null, "User"), React.createElement("th", null, "Discord ID"), React.createElement("th", null, "Key"), React.createElement("th", null, "Admin"), React.createElement("th", null, "")
-          )),
-          React.createElement("tbody", null, keys.map(k => React.createElement(KeyRow, { key: k.key, k, onReload: loadData })))
+        adminTab === 'keys' ? React.createElement(
+          'div',
+          null,
+          React.createElement(
+            'div',
+            { style: { background: 'var(--background-secondary)', padding: '12px', borderRadius: '6px', marginBottom: '16px' } },
+            React.createElement('div', { className: 'faglist-section-title', style: { marginTop: 0 } }, 'Neuen API Key erstellen'),
+            React.createElement(
+              'div',
+              { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+              React.createElement('input', { className: 'faglist-input', placeholder: 'Discord ID...', value: keyDiscordId, onChange: e => setKeyDiscordId(e.target.value) }),
+              React.createElement('input', { className: 'faglist-input', placeholder: 'Name...', value: keyUsername, onChange: e => setKeyUsername(e.target.value) }),
+              React.createElement('button', { className: 'faglist-btn faglist-btn-primary', onClick: handleCreateKey }, 'Erstellen')
+            )
+          ),
+          React.createElement('div', { className: 'faglist-section-title' }, `Vorhandene Keys (${keys.length})`),
+          React.createElement(
+            'table',
+            { className: 'faglist-admin-table' },
+            React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Name'), React.createElement('th', null, 'Discord ID'), React.createElement('th', null, 'Key'), React.createElement('th', null, 'Admin'), React.createElement('th', null, 'Aktionen'))),
+            React.createElement('tbody', null, keys.map(k => React.createElement(KeyRow, { key: k.key, k, onReload: loadData })))
+          )
+        ) : React.createElement(
+          'div',
+          null,
+          React.createElement(
+            'div',
+            { style: { background: 'var(--background-secondary)', padding: '12px', borderRadius: '6px', marginBottom: '16px' } },
+            React.createElement('div', { className: 'faglist-section-title', style: { marginTop: 0 } }, 'Nutzer (Manuell hinterlegen)'),
+            React.createElement(
+              'div',
+              { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+              React.createElement('input', { className: 'faglist-input', placeholder: 'Discord ID...', value: userDiscordId, onChange: e => setUserDiscordId(e.target.value) }),
+              React.createElement('input', { className: 'faglist-input', placeholder: 'Name...', value: userUsername, onChange: e => setUserUsername(e.target.value) }),
+              React.createElement('button', { className: 'faglist-btn faglist-btn-primary', onClick: handleCreateUser }, 'Anlegen / Update')
+            )
+          ),
+          React.createElement('div', { className: 'faglist-section-title' }, `Hinterlegte Nutzer (${users.length})`),
+          React.createElement(
+            'table',
+            { className: 'faglist-admin-table' },
+            React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Name'), React.createElement('th', null, 'Discord ID'), React.createElement('th', null, 'Erstellt'), React.createElement('th', null, 'Aktionen'))),
+            React.createElement('tbody', null, users.map(u => React.createElement(UserRow, { key: u.discord_id, u, onReload: loadData })))
+          )
         )
-      ),
-      React.createElement("div", { className: "faglist-admin-section" },
-        React.createElement("h3", null, "👥 Nutzer"),
-        React.createElement(
-          "div",
-          { className: "faglist-admin-form", style: { marginBottom: "16px" } },
-          React.createElement("input", { className: "faglist-input", placeholder: "Discord User ID", value: userDiscordId, onChange: e => setUserDiscordId(e.target.value) }),
-          React.createElement("input", { className: "faglist-input", placeholder: "Username", value: userUsername, onChange: e => setUserUsername(e.target.value) }),
-          React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: handleCreateUser }, "Hinzufügen")
-        ),
-        users.length === 0 ? React.createElement("div", null, "Keine Nutzer vorhanden.") : React.createElement(
-          "table",
-          { className: "faglist-admin-table" },
-          React.createElement("thead", null, React.createElement("tr", null, 
-            React.createElement("th", null, "Discord ID"), React.createElement("th", null, "Username"), React.createElement("th", null, "")
-          )),
-          React.createElement("tbody", null, users.map(u => React.createElement(UserRow, { key: u.discord_id, u, onReload: loadData })))
-        )
-      )
-    );
-  }
+      );
+    }
 
   /* ── Popout Badge Component ─────────────────────────────── */
   function PopoutBadge({ userId, userName, openModal }) {
