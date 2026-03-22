@@ -33,7 +33,7 @@ module.exports = (() => {
       max-height: 85vh;
     }
     .faglist-scroll-list {
-      max-height: 45vh;
+      max-height: 65vh;
       overflow-y: auto;
     }
     .faglist-tabs {
@@ -397,6 +397,34 @@ module.exports = (() => {
       word-break: break-all;
     }
     /* ── All Notes / Channel views ──────────────── */
+    .faglist-notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+    .faglist-notes-grid-card {
+      background: var(--background-secondary);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .faglist-notes-grid-header {
+      font-weight: bold;
+      font-size: 16px;
+      color: var(--header-primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--background-modifier-accent);
+      padding-bottom: 8px;
+      cursor: pointer;
+    }
+    .faglist-notes-grid-header:hover {
+      color: var(--brand-experiment);
+    }
     .faglist-user-group {
       margin-bottom: 6px;
     }
@@ -458,6 +486,167 @@ module.exports = (() => {
     .faglist-channel-count {
       font-size: 13px;
       color: var(--text-muted);
+    }
+    /* ── Fullscreen Panel (Settings-like) ──────── */
+    .faglist-backdrop-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: faglist-fade-in 0.15s ease;
+    }
+
+    .faglist-overlay {
+      display: flex;
+      width: 75vw;
+      height: 75vh;
+      background: var(--bg-overlay-app-frame, var(--background-primary, #313338));
+      color: var(--text-normal, #dbdee1);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    @keyframes faglist-fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .faglist-sidebar {
+      width: 230px;
+      min-width: 230px;
+      background: var(--bg-overlay-3, var(--background-secondary, #2b2d31));
+      display: flex;
+      flex-direction: column;
+      padding: 60px 12px 20px;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    .faglist-sidebar-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--header-secondary);
+      padding: 8px 12px 6px;
+      margin-top: 8px;
+    }
+    .faglist-sidebar-title:first-child {
+      margin-top: 0;
+    }
+    .faglist-sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--interactive-normal);
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      transition: background 0.1s, color 0.1s;
+    }
+    .faglist-sidebar-item:hover {
+      background: var(--background-modifier-hover);
+      color: var(--interactive-hover);
+    }
+    .faglist-sidebar-item.active {
+      background: var(--background-modifier-selected);
+      color: var(--interactive-active);
+    }
+    .faglist-sidebar-icon {
+      font-size: 16px;
+      width: 22px;
+      text-align: center;
+    }
+    .faglist-sidebar-sep {
+      height: 1px;
+      background: var(--background-modifier-accent);
+      margin: 8px 12px;
+    }
+    .faglist-content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      max-width: none;
+      background: transparent;
+      overflow: hidden;
+    }
+    .faglist-content-header {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--header-primary);
+      padding: 60px 40px 20px;
+      margin: 0;
+      flex-shrink: 0;
+    }
+    .faglist-content-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 40px 40px;
+    }
+    .faglist-content-body .faglist-scroll-list,
+    .faglist-content-body .faglist-modal-root {
+      max-height: none;
+      overflow-y: visible;
+    }
+    .faglist-close-area {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 101;
+    }
+    .faglist-close-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--interactive-normal);
+      background: transparent;
+      color: var(--interactive-normal);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .faglist-close-btn:hover {
+      border-color: var(--interactive-hover);
+      color: var(--interactive-hover);
+    }
+    .faglist-close-hint {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--interactive-normal);
+    }
+    .faglist-back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      border: none;
+      background: var(--background-secondary);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.15s, color 0.15s;
+    }
+    .faglist-back-btn:hover {
+      background: var(--background-modifier-hover);
+      color: var(--text-normal);
     }
   `;
 
@@ -1026,13 +1215,13 @@ module.exports = (() => {
     );
   }
 
-  /* ── Modal Component (User) ──────────────────────────────── */
+  /* ── Modal Component (User — still used inside panel) ──── */
   function FagListModal({ targetId, targetName }) {
     const [tab, setTab] = useState("notes");
 
     return React.createElement(
       "div",
-      { className: "faglist-modal-root" },
+      null,
       React.createElement(
         "div",
         { className: "faglist-tabs" },
@@ -1053,12 +1242,210 @@ module.exports = (() => {
     );
   }
 
-  /* ── Modal Component (Ranking) ──────────────────────────── */
-  function RankingModal({ openUserModal }) {
+  /* ── Fullscreen Panel Component ─────────────────────────── */
+  function FagListPanel({ initialPage, initialUser, initialChannelId, onClose }) {
+    const [page, setPage] = useState(initialPage || "ranking");
+    const [selectedUser, setSelectedUser] = useState(initialUser || null);
+    const [channelId, setChannelId] = useState(initialChannelId || null);
+    const [currentVoiceUsers, setCurrentVoiceUsers] = useState([]);
+    const [activeChannels, setActiveChannels] = useState([]);
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    useEffect(() => {
+      api.getMe().then(me => setIsAdmin(!!me.is_admin)).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+      const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
+      const VoiceStateStore = BdApi.Webpack.getStore("VoiceStateStore");
+      const UserStore = BdApi.Webpack.getStore("UserStore");
+      const ChannelStore = BdApi.Webpack.getStore("ChannelStore");
+      const SelectedGuildStore = BdApi.Webpack.getStore("SelectedGuildStore");
+
+      const currentId = channelId || SelectedChannelStore?.getVoiceChannelId?.();
+      const currentGuildId = SelectedGuildStore?.getGuildId?.();
+
+      if (currentId && VoiceStateStore && UserStore) {
+        const states = VoiceStateStore.getVoiceStatesForChannel(currentId) || {};
+        const uIds = Object.keys(states);
+        const uArr = uIds.map(uid => {
+          const u = UserStore.getUser(uid);
+          return { id: uid, name: u ? (u.globalName || u.username) : uid };
+        }).sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity: "base"}));
+        setCurrentVoiceUsers(uArr);
+      } else {
+        setCurrentVoiceUsers([]);
+      }
+
+      if (currentGuildId && VoiceStateStore && ChannelStore) {
+        let allStates = {};
+        if (typeof VoiceStateStore.getVoiceStates === "function") {
+          allStates = VoiceStateStore.getVoiceStates(currentGuildId) || {};
+        } else if (typeof VoiceStateStore.getVoiceStatesForGuild === "function") {
+          allStates = VoiceStateStore.getVoiceStatesForGuild(currentGuildId) || {};
+        }
+        const cIds = new Set(Object.values(allStates).map(s => s.channelId).filter(Boolean));
+        const cArr = Array.from(cIds).map(cid => {
+          const c = ChannelStore.getChannel(cid);
+          return { id: cid, name: c ? c.name : "Voice Channel" };
+        }).sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity: "base"}));
+        setActiveChannels(cArr);
+      }
+    }, [channelId]);
+
+    const openUserPage = useCallback((id, name) => {
+      setSelectedUser({ id, name });
+      setPage("user");
+    }, []);
+
+    const goBack = useCallback(() => {
+      setSelectedUser(null);
+      setPage("ranking");
+    }, []);
+
+    useEffect(() => {
+      const onKey = (e) => { if (e.key === "Escape") onClose(); };
+      document.addEventListener("keydown", onKey);
+      return () => document.removeEventListener("keydown", onKey);
+    }, [onClose]);
+
+    const navItems = [
+      { id: "ranking", icon: "\uD83C\uDFC6", label: "Ranking" },
+      { id: "allnotes", icon: "\uD83D\uDDD2\uFE0F", label: "Alle Notizen" },
+      { id: "channel", icon: "\uD83D\uDD0A", label: "Voice Channel" },
+    ];
+
+    let contentTitle = "";
+    let contentBody = null;
+
+    switch (page) {
+      case "ranking":
+        contentTitle = "Ranking";
+        contentBody = React.createElement(OverviewTab, { openUserModal: openUserPage });
+        break;
+      case "allnotes":
+        contentTitle = "Alle Notizen";
+        contentBody = React.createElement(AllNotesTab, { openUserModal: openUserPage });
+        break;
+      case "channel":
+        contentTitle = "Voice Channel";
+        contentBody = React.createElement(ChannelTab, { openUserModal: openUserPage, channelId });
+        break;
+      case "user":
+        contentTitle = selectedUser?.name || "Nutzer";
+        contentBody = React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "button",
+            { className: "faglist-back-btn", onClick: goBack },
+            "\u2190 Zur\u00fcck"
+          ),
+          React.createElement(FagListModal, {
+            targetId: selectedUser?.id,
+            targetName: selectedUser?.name,
+          })
+        );
+        break;
+    }
+
     return React.createElement(
       "div",
-      { className: "faglist-modal-root" },
-      React.createElement(OverviewTab, { openUserModal })
+      { className: "faglist-backdrop-overlay", onClick: onClose },
+      React.createElement(
+        "div",
+        {
+          className: "faglist-overlay",
+          onClick: (e) => e.stopPropagation()
+        },
+
+        // Close button
+      React.createElement(
+        "div",
+        { className: "faglist-close-area" },
+        React.createElement("span", { className: "faglist-close-hint" }, "ESC"),
+        React.createElement(
+          "button",
+          { className: "faglist-close-btn", onClick: onClose },
+          "\u2715"
+        )
+      ),
+
+      // Sidebar
+      React.createElement(
+        "div",
+        { className: "faglist-sidebar" },
+        React.createElement("div", { className: "faglist-sidebar-title" }, "FagList"),
+        navItems.map((item) =>
+          React.createElement(
+            "button",
+            {
+              key: item.id,
+              className: `faglist-sidebar-item${page === item.id ? " active" : ""}`,
+              onClick: () => { setPage(item.id); setSelectedUser(null); },
+            },
+            React.createElement("span", { className: "faglist-sidebar-icon" }, item.icon),
+            item.label
+          )
+        ),
+        selectedUser && React.createElement(
+          "div",
+          null,
+          React.createElement("div", { className: "faglist-sidebar-sep" }),
+          React.createElement("div", { className: "faglist-sidebar-title" }, "Gewählter Nutzer"),
+          React.createElement(
+            "button",
+            { className: "faglist-sidebar-item active" },
+            React.createElement("span", { className: "faglist-sidebar-icon" }, "\uD83D\uDC64"),
+            selectedUser.name
+          )
+        ),
+        currentVoiceUsers.length > 0 && React.createElement(
+          "div",
+          null,
+          React.createElement("div", { className: "faglist-sidebar-sep" }),
+          React.createElement("div", { className: "faglist-sidebar-title" }, "Aktueller Raum"),
+          currentVoiceUsers.map(u => 
+            React.createElement(
+              "button",
+              { 
+                key: u.id, 
+                className: `faglist-sidebar-item${page === "user" && selectedUser?.id === u.id ? " active" : ""}`,
+                onClick: () => { openUserPage(u.id, u.name); }
+              },
+              React.createElement("span", { className: "faglist-sidebar-icon" }, "\uD83D\uDC64"),
+              u.name
+            )
+          )
+        ),
+        activeChannels.length > 0 && React.createElement(
+          "div",
+          null,
+          React.createElement("div", { className: "faglist-sidebar-sep" }),
+          React.createElement("div", { className: "faglist-sidebar-title" }, "Andere Räume"),
+          activeChannels.map(c => 
+            React.createElement(
+              "button",
+              { 
+                key: c.id, 
+                className: `faglist-sidebar-item${page === "channel" && channelId === c.id ? " active" : ""}`,
+                onClick: () => { setChannelId(c.id); setPage("channel"); setSelectedUser(null); }
+              },
+              React.createElement("span", { className: "faglist-sidebar-icon" }, "\uD83D\uDD0A"),
+              c.name
+            )
+          )
+        )
+      ),
+
+      // Content
+      React.createElement(
+        "div",
+        { className: "faglist-content-area" },
+        React.createElement("div", { className: "faglist-content-header" }, contentTitle),
+        React.createElement("div", { className: "faglist-content-body" }, contentBody)
+      )
+      )
     );
   }
 
@@ -1067,7 +1454,6 @@ module.exports = (() => {
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [expanded, setExpanded] = useState({});
 
     const load = useCallback(async () => {
       try {
@@ -1097,8 +1483,6 @@ module.exports = (() => {
       a[1].name.localeCompare(b[1].name, undefined, { sensitivity: "base" })
     );
 
-    const toggle = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
-
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
 
     return React.createElement(
@@ -1110,61 +1494,47 @@ module.exports = (() => {
         ? React.createElement("div", { className: "faglist-empty" }, "Keine Notizen vorhanden.")
         : React.createElement(
             "div",
-            { className: "faglist-scroll-list" },
+            { className: "faglist-notes-grid" },
             sorted.map(([discordId, group]) =>
               React.createElement(
                 "div",
-                { key: discordId, className: "faglist-user-group" },
+                { key: discordId, className: "faglist-notes-grid-card" },
                 React.createElement(
                   "div",
-                  { className: "faglist-user-group-header", onClick: () => toggle(discordId) },
-                  React.createElement("span", { className: `faglist-expand-icon${expanded[discordId] ? " open" : ""}` }, "\u25B6"),
+                  { 
+                    className: "faglist-notes-grid-header", 
+                    onClick: () => openUserModal(discordId, group.name)
+                  },
                   React.createElement(
                     "span",
-                    {
-                      className: "faglist-group-name",
-                      onClick: (e) => { e.stopPropagation(); openUserModal(discordId, group.name); },
-                    },
+                    null,
                     resolveUsername(discordId) !== discordId ? resolveUsername(discordId) : group.name
                   ),
                   React.createElement("span", { className: "faglist-group-count" }, `${group.notes.length} Notiz${group.notes.length !== 1 ? "en" : ""}`)
                 ),
-                expanded[discordId]
-                  ? React.createElement(
-                      "div",
-                      { className: "faglist-group-notes" },
-                      group.notes.map((n) =>
-                        React.createElement(
-                          "div",
-                          { key: n.id, className: "faglist-note-card" },
-                          React.createElement("div", { className: "faglist-note-author" }, displayName(n.author_discord_id, n.author_username)),
-                          React.createElement("div", { className: "faglist-note-content" }, n.content),
-                          n.updated_at && React.createElement("div", { className: "faglist-note-date" }, `Zuletzt bearbeitet: ${fmtDate(n.updated_at)}`)
-                        )
-                      )
-                    )
-                  : null
+                group.notes.map((n) =>
+                  React.createElement(
+                    "div",
+                    { key: n.id, className: "faglist-note-card", style: { margin: 0, padding: "8px", background: "var(--background-primary)", borderRadius: "6px" } },
+                    React.createElement("div", { className: "faglist-note-author" }, displayName(n.author_discord_id, n.author_username)),
+                    React.createElement("div", { className: "faglist-note-content" }, n.content),
+                    n.updated_at && React.createElement("div", { className: "faglist-note-date" }, `Zuletzt bearbeitet: ${fmtDate(n.updated_at)}`)
+                  )
+                )
               )
             )
           )
     );
   }
 
-  function AllNotesModal({ openUserModal }) {
-    return React.createElement(
-      "div",
-      { className: "faglist-modal-root" },
-      React.createElement(AllNotesTab, { openUserModal })
-    );
-  }
-
-  /* ── Channel Modal ──────────────────────────────────────── */
+    /* ── Channel Tab ─────────────────────────────────────────── */
   function ChannelTab({ openUserModal, channelId: propChannelId }) {
     const [users, setUsers] = useState([]);
     const [channelName, setChannelName] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [noChannel, setNoChannel] = useState(false);
+    const [expanded, setExpanded] = useState({});
 
     const load = useCallback(async () => {
       try {
@@ -1203,18 +1573,26 @@ module.exports = (() => {
           return;
         }
 
-        const data = await api.batchUsers(ids);
+        const [data, notesData] = await Promise.all([
+          api.batchUsers(ids),
+          api.getAllNotes()
+        ]);
+        
         const serverMap = {};
         for (const u of data.users) serverMap[u.discord_id] = u;
 
+        const allNotes = notesData.notes || [];
+
         const result = ids.map((id) => {
           const srv = serverMap[id];
+          const userNotes = allNotes.filter(n => n.target_discord_id === id);
           return {
             discord_id: id,
             name: resolveUsername(id) !== id ? resolveUsername(id) : (srv?.username || id),
             avg_rating: srv?.avg_rating ?? null,
             total_rounds: srv?.total_rounds ?? 0,
-            total_notes: srv?.total_notes ?? 0,
+            total_notes: Math.max(srv?.total_notes ?? 0, userNotes.length),
+            notes: userNotes
           };
         });
 
@@ -1228,6 +1606,9 @@ module.exports = (() => {
     }, [propChannelId]);
 
     useEffect(() => { load(); }, [load]);
+
+    const toggle = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
 
     if (loading) return React.createElement("div", { className: "faglist-loading" }, "Laden...");
     if (noChannel) return React.createElement("div", { className: "faglist-empty" }, "Du bist in keinem Voice-Channel.");
@@ -1246,63 +1627,50 @@ module.exports = (() => {
       users.length === 0
         ? React.createElement("div", { className: "faglist-empty" }, "Keine Teilnehmer im Channel.")
         : React.createElement(
-            "table",
-            { className: "faglist-ranking-table" },
-            React.createElement(
-              "thead",
-              null,
+            "div",
+            { className: "faglist-scroll-list" },
+            users.map((u) =>
               React.createElement(
-                "tr",
-                null,
-                React.createElement("th", null, "Nutzer"),
-                React.createElement("th", null, "Bewertung"),
-                React.createElement("th", null, "Notizen")
-              )
-            ),
-            React.createElement(
-              "tbody",
-              null,
-              users.map((u) =>
+                "div",
+                { key: u.discord_id, className: "faglist-user-group" },
                 React.createElement(
-                  "tr",
-                  { key: u.discord_id },
+                  "div",
+                  { className: "faglist-user-group-header", onClick: () => toggle(u.discord_id) },
+                  React.createElement("span", { className: `faglist-expand-icon${expanded[u.discord_id] ? " open" : ""}` }, "\u25B6"),
                   React.createElement(
-                    "td",
-                    null,
-                    React.createElement(
-                      "span",
-                      {
-                        className: "faglist-rank-name",
-                        onClick: () => openUserModal(u.discord_id, u.name),
-                      },
-                      u.name
-                    )
+                    "span",
+                    {
+                      className: "faglist-group-name",
+                      onClick: (e) => { e.stopPropagation(); openUserModal(u.discord_id, u.name); },
+                    },
+                    u.name
                   ),
-                  React.createElement(
-                    "td",
-                    null,
-                    u.avg_rating != null
-                      ? React.createElement(
-                          "span",
-                          { style: { display: "flex", alignItems: "center", gap: "6px" } },
-                          React.createElement(Stars, { value: Math.round(u.avg_rating), readonly: true, size: 16 }),
-                          React.createElement("span", { style: { fontSize: "13px", color: "var(--text-muted)" } }, u.avg_rating.toFixed(2))
+                  u.avg_rating != null && React.createElement(
+                    "span",
+                    { style: { display: "flex", alignItems: "center", gap: "4px", marginLeft: "10px" } },
+                    React.createElement(Stars, { value: Math.round(u.avg_rating), readonly: true, size: 14 }),
+                    React.createElement("span", { style: { fontSize: "12px", color: "var(--text-muted)" } }, u.avg_rating.toFixed(2))
+                  ),
+                  React.createElement("span", { className: "faglist-group-count" }, `${u.total_notes} Notiz${u.total_notes !== 1 ? "en" : ""}`)
+                ),
+                expanded[u.discord_id] && u.notes && u.notes.length > 0
+                  ? React.createElement(
+                      "div",
+                      { className: "faglist-group-notes" },
+                      u.notes.map((n) =>
+                        React.createElement(
+                          "div",
+                          { key: n.id, className: "faglist-note-card" },
+                          React.createElement("div", { className: "faglist-note-author" }, displayName(n.author_discord_id, n.author_username)),
+                          React.createElement("div", { className: "faglist-note-content" }, n.content),
+                          n.updated_at && React.createElement("div", { className: "faglist-note-date" }, `Zuletzt bearbeitet: ${fmtDate(n.updated_at)}`)
                         )
-                      : React.createElement("span", { style: { color: "var(--text-muted)", fontSize: "13px" } }, "\u2014")
-                  ),
-                  React.createElement("td", null, u.total_notes)
-                )
+                      )
+                    )
+                  : expanded[u.discord_id] ? React.createElement("div", { className: "faglist-empty", style: { padding: "4px 0 12px 24px" } }, "Keine Notizen vorhanden.") : null
               )
             )
           )
-    );
-  }
-
-  function ChannelModal({ openUserModal, channelId }) {
-    return React.createElement(
-      "div",
-      { className: "faglist-modal-root" },
-      React.createElement(ChannelTab, { openUserModal, channelId })
     );
   }
 
@@ -1375,6 +1743,7 @@ module.exports = (() => {
       BdApi.Patcher.unpatchAll(config.info.name);
       if (this.contextMenuUnpatch) this.contextMenuUnpatch();
       if (this.channelMenuUnpatch) this.channelMenuUnpatch();
+      this.closePanel();
     }
 
     patchPopout() {
@@ -1404,61 +1773,51 @@ module.exports = (() => {
       });
     }
 
-    openModal(userId, userName) {
-      BdApi.UI.showConfirmationModal(
-        `FagList \u2014 ${userName}`,
-        React.createElement(FagListModal, { targetId: userId, targetName: userName }),
-        {
-          confirmText: "Schlie\u00dfen",
-          cancelText: null,
-          onConfirm: () => {},
-        }
+    openPanel(page, opts = {}) {
+      if (this._panelContainer) this.closePanel();
+      const container = document.createElement("div");
+      container.id = "faglist-panel-root";
+      const appMount = document.getElementById("app-mount") || document.body;
+      appMount.appendChild(container);
+      this._panelContainer = container;
+
+      const close = () => this.closePanel();
+      this._panelRoot = BdApi.ReactDOM.createRoot(container);
+      this._panelRoot.render(
+        React.createElement(FagListPanel, {
+          initialPage: page,
+          initialUser: opts.user || null,
+          initialChannelId: opts.channelId || null,
+          onClose: close,
+        })
       );
+    }
+
+    closePanel() {
+      if (this._panelRoot) {
+        this._panelRoot.unmount();
+        this._panelRoot = null;
+      }
+      if (this._panelContainer) {
+        this._panelContainer.remove();
+        this._panelContainer = null;
+      }
+    }
+
+    openModal(userId, userName) {
+      this.openPanel("user", { user: { id: userId, name: userName } });
     }
 
     openRankingModal() {
-      const openUserModal = (id, name) => {
-        this.openModal(id, name);
-      };
-      BdApi.UI.showConfirmationModal(
-        "FagList \u2014 Ranking",
-        React.createElement(RankingModal, { openUserModal }),
-        {
-          confirmText: "Schlie\u00dfen",
-          cancelText: null,
-          onConfirm: () => {},
-        }
-      );
+      this.openPanel("ranking");
     }
 
     openAllNotesModal() {
-      const openUserModal = (id, name) => {
-        this.openModal(id, name);
-      };
-      BdApi.UI.showConfirmationModal(
-        "FagList \u2014 Alle Notizen",
-        React.createElement(AllNotesModal, { openUserModal }),
-        {
-          confirmText: "Schlie\u00dfen",
-          cancelText: null,
-          onConfirm: () => {},
-        }
-      );
+      this.openPanel("allnotes");
     }
 
     openChannelModal(channelId) {
-      const openUserModal = (id, name) => {
-        this.openModal(id, name);
-      };
-      BdApi.UI.showConfirmationModal(
-        "FagList \u2014 Voice Channel",
-        React.createElement(ChannelModal, { openUserModal, channelId }),
-        {
-          confirmText: "Schlie\u00dfen",
-          cancelText: null,
-          onConfirm: () => {},
-        }
-      );
+      this.openPanel("channel", { channelId });
     }
 
     getSettingsPanel() {
@@ -1524,275 +1883,177 @@ module.exports = (() => {
       serverInfo.textContent = `Server: ${getApiBase()}`;
       panel.appendChild(serverInfo);
 
-      // ── Admin sections (loaded async) ──
-      const adminContainer = document.createElement("div");
-      panel.appendChild(adminContainer);
-
-      api.getMe().then((me) => {
-        if (!me.is_admin) return;
-        this._renderAdminKeysSection(adminContainer);
-        this._renderAdminUsersSection(adminContainer);
-      }).catch(() => {});
+      
 
       return panel;
     }
 
-    _renderAdminKeysSection(container) {
-      const section = document.createElement("div");
-      section.className = "faglist-admin-section";
+  }
 
-      const title = document.createElement("h3");
-      title.textContent = "\uD83D\uDD11 API Keys";
-      section.appendChild(title);
+  /* ── Admin Tab ──────────────────────────────────────────────────────── */
+  function KeyRow({ k, onReload }) {
+    const [name, setName] = useState(k.username);
+    const [discordId, setDiscordId] = useState(k.discord_user_id);
+    const [isAdmin, setIsAdmin] = useState(!!k.is_admin);
 
-      const tableWrap = document.createElement("div");
-      section.appendChild(tableWrap);
+    const handleSave = async () => {
+      try {
+        await api.renameKey(k.key, name.trim(), discordId.trim() || undefined, isAdmin);
+        BdApi.UI.showToast("Key aktualisiert!", { type: "success" });
+        onReload();
+      } catch (e) {
+        BdApi.UI.showToast(e.message, { type: "error" });
+      }
+    };
 
-      const form = document.createElement("div");
-      form.className = "faglist-admin-form";
+    const handleDelete = async () => {
+      try {
+        await api.deleteKey(k.key);
+        BdApi.UI.showToast("Key gelöscht", { type: "success" });
+        onReload();
+      } catch (e) {
+        BdApi.UI.showToast(e.message, { type: "error" });
+      }
+    };
 
-      const idInput = document.createElement("input");
-      idInput.className = "faglist-input";
-      idInput.placeholder = "Discord User ID";
-      form.appendChild(idInput);
+    return React.createElement(
+      "tr",
+      null,
+      React.createElement("td", null, React.createElement("input", { className: "faglist-input", value: name, onChange: e => setName(e.target.value), style: { padding: "4px 8px", fontSize: "13px", width: "auto" } })),
+      React.createElement("td", null, React.createElement("input", { className: "faglist-input", value: discordId, onChange: e => setDiscordId(e.target.value), style: { padding: "4px 8px", fontSize: "13px", width: "auto", fontFamily: "monospace" } })),
+      React.createElement("td", { className: "faglist-key-text" }, k.key),
+      React.createElement("td", null, React.createElement("input", { type: "checkbox", checked: isAdmin, onChange: e => setIsAdmin(e.target.checked), style: { width: "16px", height: "16px", cursor: "pointer" } })),
+      React.createElement("td", null, 
+        React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: handleSave, style: { padding: "2px 8px", fontSize: "11px", marginRight: "6px" } }, "Speichern"),
+        React.createElement("button", { className: "faglist-delete-btn", onClick: handleDelete, title: "Löschen" }, "✕")
+      )
+    );
+  }
 
-      const nameInput = document.createElement("input");
-      nameInput.className = "faglist-input";
-      nameInput.placeholder = "Username";
-      form.appendChild(nameInput);
+  function UserRow({ u, onReload }) {
+    const [name, setName] = useState(u.username);
+    const [discordId, setDiscordId] = useState(u.discord_id);
 
-      const addBtn = document.createElement("button");
-      addBtn.className = "faglist-btn faglist-btn-primary";
-      addBtn.textContent = "Key erstellen";
-      addBtn.addEventListener("click", async () => {
-        const discordId = idInput.value.trim();
-        const username = nameInput.value.trim();
-        if (!discordId || !username) return;
-        try {
-          const res = await api.createKey(discordId, username);
-          if (res.existing) {
-            BdApi.UI.showToast("Key existiert bereits", { type: "info" });
-          } else {
-            BdApi.UI.showToast("Key erstellt!", { type: "success" });
-          }
-          idInput.value = "";
-          nameInput.value = "";
-          loadKeys();
-        } catch (e) {
-          BdApi.UI.showToast(e.message, { type: "error" });
-        }
-      });
-      form.appendChild(addBtn);
-      section.appendChild(form);
+    const handleSave = async () => {
+      try {
+        await api.updateUser(u.discord_id, name.trim(), discordId.trim() || undefined);
+        BdApi.UI.showToast("Nutzer aktualisiert!", { type: "success" });
+        onReload();
+      } catch (e) {
+        BdApi.UI.showToast(e.message, { type: "error" });
+      }
+    };
 
-      container.appendChild(section);
+    return React.createElement(
+      "tr",
+      null,
+      React.createElement("td", null, React.createElement("input", { className: "faglist-input", value: discordId, onChange: e => setDiscordId(e.target.value), style: { padding: "4px 8px", fontSize: "13px", width: "auto", fontFamily: "monospace" } })),
+      React.createElement("td", null, React.createElement("input", { className: "faglist-input", value: name, onChange: e => setName(e.target.value), style: { padding: "4px 8px", fontSize: "13px", width: "auto" } })),
+      React.createElement("td", null, 
+        React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: handleSave, style: { padding: "4px 10px", fontSize: "12px" } }, "Speichern")
+      )
+    );
+  }
 
-      const loadKeys = async () => {
-        try {
-          const data = await api.getKeys();
-          tableWrap.innerHTML = "";
-          if (data.keys.length === 0) {
-            tableWrap.textContent = "Keine Keys vorhanden.";
-            return;
-          }
-          const table = document.createElement("table");
-          table.className = "faglist-admin-table";
+  function AdminTab() {
+    const [keys, setKeys] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-          const thead = document.createElement("thead");
-          thead.innerHTML = "<tr><th>User</th><th>Discord ID</th><th>Key</th><th>Admin</th><th></th></tr>";
-          table.appendChild(thead);
+    const [keyDiscordId, setKeyDiscordId] = useState("");
+    const [keyUsername, setKeyUsername] = useState("");
 
+    const [userDiscordId, setUserDiscordId] = useState("");
+    const [userUsername, setUserUsername] = useState("");
 
-          const tbody = document.createElement("tbody");
-          for (const k of data.keys) {
-            const tr = document.createElement("tr");
+    const loadData = useCallback(async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [k, u] = await Promise.all([api.getKeys(), api.getUsers()]);
+        setKeys(k.keys);
+        setUsers(u.users);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }, []);
 
-            const tdUser = document.createElement("td");
-            const nameField = document.createElement("input");
-            nameField.className = "faglist-input";
-            nameField.value = k.username;
-            nameField.style.cssText = "padding:4px 8px;font-size:13px;width:auto";
-            tdUser.appendChild(nameField);
+    useEffect(() => { loadData(); }, [loadData]);
 
-            const saveBtn = document.createElement("button");
-            saveBtn.className = "faglist-btn faglist-btn-primary";
-            saveBtn.textContent = "Speichern";
-            saveBtn.style.cssText = "padding:2px 8px;font-size:11px;margin-left:6px";
-            saveBtn.addEventListener("click", async () => {
-              const newName = nameField.value.trim();
-              const newId = idField.value.trim();
-              if (!newName) return;
-              try {
-                await api.renameKey(k.key, newName, newId || undefined, adminCheckbox.checked);
-                BdApi.UI.showToast("Key aktualisiert!", { type: "success" });
-                loadKeys();
-              } catch (e) {
-                BdApi.UI.showToast(e.message, { type: "error" });
-              }
-            });
-            tdUser.appendChild(saveBtn);
-            tr.appendChild(tdUser);
+    const handleCreateKey = async () => {
+      if (!keyDiscordId || !keyUsername) return;
+      try {
+        const res = await api.createKey(keyDiscordId.trim(), keyUsername.trim());
+        if (res.existing) BdApi.UI.showToast("Key existiert bereits", { type: "info" });
+        else BdApi.UI.showToast("Key erstellt!", { type: "success" });
+        setKeyDiscordId("");
+        setKeyUsername("");
+        loadData();
+      } catch (e) {
+        BdApi.UI.showToast(e.message, { type: "error" });
+      }
+    };
 
-            const tdId = document.createElement("td");
-            const idField = document.createElement("input");
-            idField.className = "faglist-input";
-            idField.value = k.discord_user_id;
-            idField.style.cssText = "padding:4px 8px;font-size:13px;width:auto;font-family:monospace";
-            tdId.appendChild(idField);
-            tr.appendChild(tdId);
+    const handleCreateUser = async () => {
+      if (!userDiscordId || !userUsername) return;
+      try {
+        await api.addUser(userDiscordId.trim(), userUsername.trim());
+        BdApi.UI.showToast("Nutzer hinzugefügt!", { type: "success" });
+        setUserDiscordId("");
+        setUserUsername("");
+        loadData();
+      } catch (e) {
+        BdApi.UI.showToast(e.message, { type: "error" });
+      }
+    };
 
-            const tdKey = document.createElement("td");
-            tdKey.className = "faglist-key-text";
-            tdKey.textContent = k.key;
-            tr.appendChild(tdKey);
+    if (loading) return React.createElement("div", { className: "faglist-loading" }, "Laden...");
+    if (error) return React.createElement("div", { className: "faglist-error" }, error);
 
-            const tdAdmin = document.createElement("td");
-            const adminCheckbox = document.createElement("input");
-            adminCheckbox.type = "checkbox";
-            adminCheckbox.checked = !!k.is_admin;
-            adminCheckbox.style.cssText = "width:16px;height:16px;cursor:pointer";
-            tdAdmin.appendChild(adminCheckbox);
-            tr.appendChild(tdAdmin);
-
-            const tdAction = document.createElement("td");
-            const delBtn = document.createElement("button");
-            delBtn.className = "faglist-delete-btn";
-            delBtn.textContent = "\u2715";
-            delBtn.title = "Key l\u00f6schen";
-            delBtn.addEventListener("click", async () => {
-              try {
-                await api.deleteKey(k.key);
-                BdApi.UI.showToast("Key gel\u00f6scht", { type: "success" });
-                loadKeys();
-              } catch (e) {
-                BdApi.UI.showToast(e.message, { type: "error" });
-              }
-            });
-            tdAction.appendChild(delBtn);
-            tr.appendChild(tdAction);
-
-            tbody.appendChild(tr);
-          }
-          table.appendChild(tbody);
-          tableWrap.appendChild(table);
-        } catch (e) {
-          tableWrap.textContent = `Fehler: ${e.message}`;
-        }
-      };
-      loadKeys();
-    }
-
-    _renderAdminUsersSection(container) {
-      const section = document.createElement("div");
-      section.className = "faglist-admin-section";
-
-      const title = document.createElement("h3");
-      title.textContent = "\uD83D\uDC64 Nutzer";
-      section.appendChild(title);
-
-      const tableWrap = document.createElement("div");
-      section.appendChild(tableWrap);
-
-      const form = document.createElement("div");
-      form.className = "faglist-admin-form";
-
-      const idInput = document.createElement("input");
-      idInput.className = "faglist-input";
-      idInput.placeholder = "Discord User ID";
-      form.appendChild(idInput);
-
-      const nameInput = document.createElement("input");
-      nameInput.className = "faglist-input";
-      nameInput.placeholder = "Username";
-      form.appendChild(nameInput);
-
-      const addBtn = document.createElement("button");
-      addBtn.className = "faglist-btn faglist-btn-primary";
-      addBtn.textContent = "Hinzuf\u00fcgen";
-      addBtn.addEventListener("click", async () => {
-        const discordId = idInput.value.trim();
-        const username = nameInput.value.trim();
-        if (!discordId || !username) return;
-        try {
-          await api.addUser(discordId, username);
-          BdApi.UI.showToast("Nutzer hinzugef\u00fcgt!", { type: "success" });
-          idInput.value = "";
-          nameInput.value = "";
-          loadUsers();
-        } catch (e) {
-          BdApi.UI.showToast(e.message, { type: "error" });
-        }
-      });
-      form.appendChild(addBtn);
-      section.appendChild(form);
-
-      container.appendChild(section);
-
-      const loadUsers = async () => {
-        try {
-          const data = await api.getUsers();
-          tableWrap.innerHTML = "";
-          if (data.users.length === 0) {
-            tableWrap.textContent = "Keine Nutzer vorhanden.";
-            return;
-          }
-          const table = document.createElement("table");
-          table.className = "faglist-admin-table";
-
-          const thead = document.createElement("thead");
-          thead.innerHTML = "<tr><th>Discord ID</th><th>Username</th><th></th></tr>";
-          table.appendChild(thead);
-
-          const tbody = document.createElement("tbody");
-          for (const u of data.users) {
-            const tr = document.createElement("tr");
-
-            const tdId = document.createElement("td");
-            const idField = document.createElement("input");
-            idField.className = "faglist-input";
-            idField.value = u.discord_id;
-            idField.style.cssText = "padding:4px 8px;font-size:13px;width:auto;font-family:monospace";
-            tdId.appendChild(idField);
-            tr.appendChild(tdId);
-
-            const tdName = document.createElement("td");
-            const nameField = document.createElement("input");
-            nameField.className = "faglist-input";
-            nameField.value = u.username;
-            tdName.appendChild(nameField);
-            tr.appendChild(tdName);
-
-            const tdAction = document.createElement("td");
-            const saveBtn = document.createElement("button");
-            saveBtn.className = "faglist-btn faglist-btn-primary";
-            saveBtn.textContent = "Speichern";
-            saveBtn.style.cssText = "padding:4px 10px;font-size:12px";
-            saveBtn.addEventListener("click", async () => {
-              const newName = nameField.value.trim();
-              const newId = idField.value.trim();
-              if (!newName || !newId) return;
-              try {
-                await api.updateUser(u.discord_id, newName, newId);
-                BdApi.UI.showToast("Nutzer aktualisiert!", { type: "success" });
-                loadUsers();
-              } catch (e) {
-                BdApi.UI.showToast(e.message, { type: "error" });
-              }
-            });
-            tdAction.appendChild(saveBtn);
-            tr.appendChild(tdAction);
-
-            tbody.appendChild(tr);
-          }
-          table.appendChild(tbody);
-          tableWrap.appendChild(table);
-        } catch (e) {
-          tableWrap.textContent = `Fehler: ${e.message}`;
-        }
-      };
-      loadUsers();
-    }
-  };
+    return React.createElement(
+      "div",
+      { className: "faglist-scroll-list" },
+      React.createElement("div", { className: "faglist-admin-section" },
+        React.createElement("h3", null, "🔑 API Keys"),
+        React.createElement(
+          "div",
+          { className: "faglist-admin-form", style: { marginBottom: "16px" } },
+          React.createElement("input", { className: "faglist-input", placeholder: "Discord User ID", value: keyDiscordId, onChange: e => setKeyDiscordId(e.target.value) }),
+          React.createElement("input", { className: "faglist-input", placeholder: "Username", value: keyUsername, onChange: e => setKeyUsername(e.target.value) }),
+          React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: handleCreateKey }, "Key erstellen")
+        ),
+        keys.length === 0 ? React.createElement("div", null, "Keine Keys vorhanden.") : React.createElement(
+          "table",
+          { className: "faglist-admin-table" },
+          React.createElement("thead", null, React.createElement("tr", null, 
+            React.createElement("th", null, "User"), React.createElement("th", null, "Discord ID"), React.createElement("th", null, "Key"), React.createElement("th", null, "Admin"), React.createElement("th", null, "")
+          )),
+          React.createElement("tbody", null, keys.map(k => React.createElement(KeyRow, { key: k.key, k, onReload: loadData })))
+        )
+      ),
+      React.createElement("div", { className: "faglist-admin-section" },
+        React.createElement("h3", null, "👥 Nutzer"),
+        React.createElement(
+          "div",
+          { className: "faglist-admin-form", style: { marginBottom: "16px" } },
+          React.createElement("input", { className: "faglist-input", placeholder: "Discord User ID", value: userDiscordId, onChange: e => setUserDiscordId(e.target.value) }),
+          React.createElement("input", { className: "faglist-input", placeholder: "Username", value: userUsername, onChange: e => setUserUsername(e.target.value) }),
+          React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: handleCreateUser }, "Hinzufügen")
+        ),
+        users.length === 0 ? React.createElement("div", null, "Keine Nutzer vorhanden.") : React.createElement(
+          "table",
+          { className: "faglist-admin-table" },
+          React.createElement("thead", null, React.createElement("tr", null, 
+            React.createElement("th", null, "Discord ID"), React.createElement("th", null, "Username"), React.createElement("th", null, "")
+          )),
+          React.createElement("tbody", null, users.map(u => React.createElement(UserRow, { key: u.discord_id, u, onReload: loadData })))
+        )
+      )
+    );
+  }
 
   /* ── Popout Badge Component ─────────────────────────────── */
   function PopoutBadge({ userId, userName, openModal }) {

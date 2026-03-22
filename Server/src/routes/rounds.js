@@ -2,9 +2,10 @@ const db = require("../db");
 const authHook = require("../auth");
 
 const getRounds = db.prepare(`
-  SELECT r.id, r.author_discord_id, COALESCE(a.username, r.author_discord_id) as author_username,
+  SELECT r.id, r.author_discord_id, COALESCE(u.username, a.username, r.author_discord_id) as author_username,
          r.game, r.info, r.played_at, r.rating, r.created_at
   FROM rounds r
+  LEFT JOIN users u ON u.discord_id = r.author_discord_id
   LEFT JOIN api_keys a ON a.discord_user_id = r.author_discord_id
   WHERE r.target_discord_id = ?
   ORDER BY r.played_at DESC
