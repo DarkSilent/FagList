@@ -14,14 +14,10 @@ const getAllKeys = db.prepare(
   "SELECT key, discord_user_id, username, is_admin, created_at FROM api_keys ORDER BY created_at DESC"
 );
 
-const deleteKeyStmt = db.prepare("DELETE FROM api_keys WHERE key = ? AND is_admin = 0");
+const deleteKeyStmt = db.prepare("DELETE FROM api_keys WHERE key = ?");
 
-const updateKeyUsername = db.prepare(
-  "UPDATE api_keys SET username = ? WHERE key = ? AND is_admin = 0"
-);
-
-const updateKeyFull = db.prepare(
-  "UPDATE api_keys SET username = ?, discord_user_id = ? WHERE key = ? AND is_admin = 0"
+const updateKey = db.prepare(
+  "UPDATE api_keys SET username = ?, discord_user_id = ?, is_admin = ? WHERE key = ?"
 );
 
 async function keysRoutes(fastify) {
@@ -67,31 +63,37 @@ async function keysRoutes(fastify) {
     if (!request.isAdmin) {
       return reply.code(403).send({ error: "Admin privileges required" });
     }
+    if (request.params.key === request.headers["x-api-key"]) {
+      return reply.code(400).send({ error: "Cannot delete your own key" });
+    }
     const result = deleteKeyStmt.run(request.params.key);
     if (result.changes === 0) {
-      return reply.code(404).send({ error: "Key not found or is admin key" });
+      return reply.code(404).send({ error: "Key not found" });
     }
     return { ok: true };
   });
 
-  // Admin-only: update key (username and/or discord_user_id)
+  // Admin-only: update key (username, discord_user_id, is_admin)
   fastify.patch("/api/keys/:key", async (request, reply) => {
     if (!request.isAdmin) {
       return reply.code(403).send({ error: "Admin privileges required" });
     }
-    const { username, discord_user_id } = request.body || {};
+    const { username, discord_user_id, is_admin } = request.body || {};
     if (!username || typeof username !== "string" || username.trim().length === 0) {
       return reply.code(400).send({ error: "username is required" });
     }
-    let result;
-    if (discord_user_id && typeof discord_user_id === "string" && discord_user_id.trim().length > 0) {
-      result = updateKeyFull.run(username.trim(), discord_user_id.trim(), request.params.key);
-    } else {
-      result = updateKeyUsername.run(username.trim(), request.params.key);
+
+    const existing = getAllKeys.all().find(k => k.key === request.params.key);
+    if (!existing) {
+      return reply.code(404).send({ error: "Key not found" });
     }
-    if (result.changes === 0) {
-      return reply.code(404).send({ error: "Key not found or is admin key" });
-    }
+
+    const newDiscordId = (discord_user_id && typeof discord_user_id === "string" && discord_user_id.trim().length > 0)
+      ? discord_user_id.trim()
+      : existing.discord_user_id;
+    const newIsAdmin = typeof is_admin === "boolean" ? (is_admin ? 1 : 0) : existing.is_admin;
+
+    updateKey.run(username.trim(), newDiscordId, newIsAdmin, request.params.key);
     return { ok: true };
   });
 }

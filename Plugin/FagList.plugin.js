@@ -524,10 +524,10 @@ module.exports = (() => {
       }),
     deleteKey: (key) =>
       apiFetch(`/api/keys/${key}`, { method: "DELETE" }),
-    renameKey: (key, username, discord_user_id) =>
+    renameKey: (key, username, discord_user_id, is_admin) =>
       apiFetch(`/api/keys/${key}`, {
         method: "PATCH",
-        body: JSON.stringify({ username, discord_user_id }),
+        body: JSON.stringify({ username, discord_user_id, is_admin }),
       }),
 
     getAllNotes: () => apiFetch("/api/notes/all"),
@@ -1608,46 +1608,37 @@ module.exports = (() => {
             const tr = document.createElement("tr");
 
             const tdUser = document.createElement("td");
-            if (!k.is_admin) {
-              const nameField = document.createElement("input");
-              nameField.className = "faglist-input";
-              nameField.value = k.username;
-              nameField.style.cssText = "padding:4px 8px;font-size:13px;width:auto";
-              tdUser.appendChild(nameField);
+            const nameField = document.createElement("input");
+            nameField.className = "faglist-input";
+            nameField.value = k.username;
+            nameField.style.cssText = "padding:4px 8px;font-size:13px;width:auto";
+            tdUser.appendChild(nameField);
 
-              const saveBtn = document.createElement("button");
-              saveBtn.className = "faglist-btn faglist-btn-primary";
-              saveBtn.textContent = "Speichern";
-              saveBtn.style.cssText = "padding:2px 8px;font-size:11px;margin-left:6px";
-              saveBtn.addEventListener("click", async () => {
-                const newName = nameField.value.trim();
-                const newId = idField ? idField.value.trim() : "";
-                if (!newName) return;
-                try {
-                  await api.renameKey(k.key, newName, newId || undefined);
-                  BdApi.UI.showToast("Key aktualisiert!", { type: "success" });
-                  loadKeys();
-                } catch (e) {
-                  BdApi.UI.showToast(e.message, { type: "error" });
-                }
-              });
-              tdUser.appendChild(saveBtn);
-            } else {
-              tdUser.textContent = k.username;
-            }
+            const saveBtn = document.createElement("button");
+            saveBtn.className = "faglist-btn faglist-btn-primary";
+            saveBtn.textContent = "Speichern";
+            saveBtn.style.cssText = "padding:2px 8px;font-size:11px;margin-left:6px";
+            saveBtn.addEventListener("click", async () => {
+              const newName = nameField.value.trim();
+              const newId = idField.value.trim();
+              if (!newName) return;
+              try {
+                await api.renameKey(k.key, newName, newId || undefined, adminCheckbox.checked);
+                BdApi.UI.showToast("Key aktualisiert!", { type: "success" });
+                loadKeys();
+              } catch (e) {
+                BdApi.UI.showToast(e.message, { type: "error" });
+              }
+            });
+            tdUser.appendChild(saveBtn);
             tr.appendChild(tdUser);
 
             const tdId = document.createElement("td");
-            let idField = null;
-            if (!k.is_admin) {
-              idField = document.createElement("input");
-              idField.className = "faglist-input";
-              idField.value = k.discord_user_id;
-              idField.style.cssText = "padding:4px 8px;font-size:13px;width:auto;font-family:monospace";
-              tdId.appendChild(idField);
-            } else {
-              tdId.textContent = k.discord_user_id;
-            }
+            const idField = document.createElement("input");
+            idField.className = "faglist-input";
+            idField.value = k.discord_user_id;
+            idField.style.cssText = "padding:4px 8px;font-size:13px;width:auto;font-family:monospace";
+            tdId.appendChild(idField);
             tr.appendChild(tdId);
 
             const tdKey = document.createElement("td");
@@ -1656,26 +1647,28 @@ module.exports = (() => {
             tr.appendChild(tdKey);
 
             const tdAdmin = document.createElement("td");
-            tdAdmin.textContent = k.is_admin ? "\u2705" : "";
+            const adminCheckbox = document.createElement("input");
+            adminCheckbox.type = "checkbox";
+            adminCheckbox.checked = !!k.is_admin;
+            adminCheckbox.style.cssText = "width:16px;height:16px;cursor:pointer";
+            tdAdmin.appendChild(adminCheckbox);
             tr.appendChild(tdAdmin);
 
             const tdAction = document.createElement("td");
-            if (!k.is_admin) {
-              const delBtn = document.createElement("button");
-              delBtn.className = "faglist-delete-btn";
-              delBtn.textContent = "\u2715";
-              delBtn.title = "Key l\u00f6schen";
-              delBtn.addEventListener("click", async () => {
-                try {
-                  await api.deleteKey(k.key);
-                  BdApi.UI.showToast("Key gel\u00f6scht", { type: "success" });
-                  loadKeys();
-                } catch (e) {
-                  BdApi.UI.showToast(e.message, { type: "error" });
-                }
-              });
-              tdAction.appendChild(delBtn);
-            }
+            const delBtn = document.createElement("button");
+            delBtn.className = "faglist-delete-btn";
+            delBtn.textContent = "\u2715";
+            delBtn.title = "Key l\u00f6schen";
+            delBtn.addEventListener("click", async () => {
+              try {
+                await api.deleteKey(k.key);
+                BdApi.UI.showToast("Key gel\u00f6scht", { type: "success" });
+                loadKeys();
+              } catch (e) {
+                BdApi.UI.showToast(e.message, { type: "error" });
+              }
+            });
+            tdAction.appendChild(delBtn);
             tr.appendChild(tdAction);
 
             tbody.appendChild(tr);
