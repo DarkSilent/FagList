@@ -1,7 +1,7 @@
 ﻿/**
  * @name FagList
  * @author DarkSilent
- * @version 1.3.0
+ * @version 1.2.0
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
  * @source https://github.com/DarkSilent/FagList
  */
@@ -1769,9 +1769,6 @@ module.exports = (() => {
       { id: "search", icon: "\uD83D\uDD0D", label: "Suche" },
       { id: "channel", icon: "\uD83D\uDD0A", label: "Voice Channel" },
     ];
-      if (isAdmin) {
-        navItems.push({ id: "admin", icon: "\u2699\uFE0F", label: "Admin" });
-      }
 
     const [searchPageQuery, setSearchPageQuery] = useState("");
 
@@ -1948,21 +1945,42 @@ module.exports = (() => {
         React.createElement(
           "div",
           { className: "faglist-sidebar-bottom" },
+          isAdmin && React.createElement(
+            "button",
+            {
+              className: `faglist-sidebar-item${page === "admin" ? " active" : ""}`,
+              onClick: () => { setPage("admin"); setSelectedUser(null); },
+            },
+            React.createElement("span", { className: "faglist-sidebar-icon" }, "\u2699\uFE0F"),
+            "Admin"
+          ),
           React.createElement(
             "button",
             {
               className: `faglist-sidebar-update-btn${hasUpdate ? " has-update" : ""}`,
-              disabled: checking,
+              disabled: checking || updating,
               onClick: async () => {
-                setChecking(true);
-                const result = await checkForUpdate();
-                setHasUpdate(result);
-                setChecking(false);
-                if (!result) BdApi.UI.showToast("Kein Update verf\u00fcgbar.", { type: "info" });
+                if (hasUpdate) {
+                  setUpdating(true);
+                  try {
+                    await performUpdate();
+                    setHasUpdate(false);
+                  } catch (e) {
+                    BdApi.UI.showToast(`Update fehlgeschlagen: ${e.message}`, { type: "error" });
+                  } finally {
+                    setUpdating(false);
+                  }
+                } else {
+                  setChecking(true);
+                  const result = await checkForUpdate();
+                  setHasUpdate(result);
+                  setChecking(false);
+                  if (!result) BdApi.UI.showToast("Kein Update verf\u00fcgbar.", { type: "info" });
+                }
               },
             },
-            React.createElement("span", { className: "faglist-sidebar-icon" }, checking ? "\u23F3" : (hasUpdate ? "\u26A0\uFE0F" : "\uD83D\uDD04")),
-            checking ? "Pr\u00fcfe\u2026" : (hasUpdate ? "Update verf\u00fcgbar!" : "Nach Updates suchen")
+            React.createElement("span", { className: "faglist-sidebar-icon" }, checking ? "\u23F3" : (updating ? "\u23F3" : (hasUpdate ? "\u26A0\uFE0F" : "\uD83D\uDD04"))),
+            checking ? "Pr\u00fcfe\u2026" : (updating ? "Wird aktualisiert\u2026" : (hasUpdate ? "Jetzt updaten" : "Nach Updates suchen"))
           )
         )
       ),
