@@ -1,7 +1,7 @@
 ﻿/**
  * @name FagList
  * @author DarkSilent
- * @version 1.1.0
+ * @version 1.2.0
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
  * @source https://github.com/DarkSilent/FagList
  */
@@ -934,9 +934,11 @@ module.exports = (() => {
     const [myNoteDate, setMyNoteDate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState(null);
 
-    const UserStore = BdApi.Webpack.getStore("UserStore");
-    const currentUserId = UserStore?.getCurrentUser()?.id;
+    useEffect(() => {
+      api.getMe().then((me) => setCurrentUserId(me?.discord_user_id ?? null)).catch(() => {});
+    }, []);
 
     const importDiscordNote = async () => {
       try {
@@ -989,6 +991,8 @@ module.exports = (() => {
       try {
         setLoading(true);
         setError(null);
+        setMyNote("");
+        setMyNoteDate(null);
         const data = await api.getNotes(targetId);
         setNotes(data.notes);
         const mine = data.notes.find((n) => n.author_discord_id === currentUserId);
