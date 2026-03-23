@@ -1747,7 +1747,7 @@ module.exports = (() => {
       return () => document.removeEventListener("keydown", onKey);
     }, [onClose]);
 
-    const [hasUpdate, setHasUpdate] = useState(updateAvailable);
+    const [hasUpdate, setHasUpdate] = useState(false);
     const [updating, setUpdating] = useState(false);
     const [checking, setChecking] = useState(false);
 
@@ -1971,16 +1971,6 @@ module.exports = (() => {
       React.createElement(
         "div",
         { className: "faglist-content-area" },
-        hasUpdate && React.createElement(
-          "div",
-          { className: "faglist-update-banner" },
-          React.createElement("span", { className: "faglist-update-banner-text" }, "\u26A0\uFE0F Update verf\u00fcgbar"),
-          React.createElement(
-            "button",
-            { className: "faglist-update-btn", disabled: updating, onClick: handleUpdate },
-            updating ? "Aktualisiert\u2026" : "Updaten"
-          )
-        ),
         React.createElement("div", { className: "faglist-content-header" },
           contentTitle,
           contentHeaderExtra
@@ -2290,12 +2280,6 @@ module.exports = (() => {
         });
 
       this.patchPopout();
-
-      checkForUpdate().then((hasUpdate) => {
-        if (hasUpdate) {
-          BdApi.UI.showToast("FagList Update verf\u00fcgbar! \u00d6ffne die Einstellungen zum Aktualisieren.", { type: "warning", timeout: 8000 });
-        }
-      });
     }
 
     
