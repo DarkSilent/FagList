@@ -11,7 +11,7 @@ module.exports = (() => {
     info: {
       name: "FagList",
       authors: [{ name: "DarkSilent" }],
-      version: "1.1.0",
+      version: "1.4.0",
       description: "Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.",
     },
   };
