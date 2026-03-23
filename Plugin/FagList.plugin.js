@@ -1,7 +1,7 @@
 ﻿/**
  * @name FagList
  * @author DarkSilent
- * @version 1.4.0
+ * @version 1.4.1
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
  * @source https://github.com/DarkSilent/FagList
  */
@@ -11,7 +11,7 @@ module.exports = (() => {
     info: {
       name: "FagList",
       authors: [{ name: "DarkSilent" }],
-      version: "1.4.0",
+      version: "1.4.1",
       description: "Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.",
     },
   };
@@ -1472,12 +1472,18 @@ module.exports = (() => {
   }
 
   /* ── Add Round Modal Content ─────────────────────────────── */
+  const POSITION_OPTIONS = ["FW1", "FW2", "RD", "POL", "LST"];
+
   function AddRoundForm({ targetId, targetName, onAdded }) {
-    const [game, setGame] = useState("");
+    const [positions, setPositions] = useState([]);
     const [info, setInfo] = useState("");
     const [rating, setRating] = useState(0);
     const [error, setError] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    const togglePosition = (pos) => {
+      setPositions((prev) => prev.includes(pos) ? prev.filter((p) => p !== pos) : [...prev, pos]);
+    };
 
     const submit = useCallback(async () => {
       if (rating < 0 || rating > 5) {
@@ -1487,6 +1493,7 @@ module.exports = (() => {
       try {
         setSaving(true);
         setError(null);
+        const game = positions.join(", ");
         await api.addRound(targetId, { game, info, rating, target_username: targetName });
         if (onAdded) onAdded();
       } catch (e) {
@@ -1494,7 +1501,7 @@ module.exports = (() => {
       } finally {
         setSaving(false);
       }
-    }, [targetId, targetName, game, info, rating, onAdded]);
+    }, [targetId, targetName, positions, info, rating, onAdded]);
 
     useEffect(() => {
       AddRoundForm._submit = submit;
@@ -1508,15 +1515,25 @@ module.exports = (() => {
       React.createElement("div", { className: "faglist-section-title" }, "Neue Runde eintragen"),
       React.createElement(
         "div",
-        { className: "faglist-form-row", style: { flexDirection: "column", gap: "4px" } },
-        React.createElement("input", {
-          className: "faglist-input",
-          value: game,
-          onChange: (e) => setGame(e.target.value),
-          placeholder: "Spiel",
-          maxLength: 200,
-        }),
-        React.createElement("div", { style: { fontSize: "11px", color: "var(--text-muted)", textAlign: "right" } }, `${game.length} / 200`)
+        { className: "faglist-form-row", style: { flexDirection: "column", gap: "6px" } },
+        React.createElement("span", { style: { fontSize: "14px", fontWeight: 600 } }, "Position:"),
+        React.createElement(
+          "div",
+          { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+          POSITION_OPTIONS.map((pos) =>
+            React.createElement(
+              "button",
+              {
+                key: pos,
+                className: `faglist-btn${positions.includes(pos) ? " faglist-btn-primary" : ""}`,
+                style: positions.includes(pos) ? {} : { background: "var(--fl-bg-input, var(--background-tertiary))", color: "var(--fl-text-body, var(--text-normal))" },
+                onClick: () => togglePosition(pos),
+                type: "button",
+              },
+              pos
+            )
+          )
+        )
       ),
       React.createElement(
         "div",
@@ -1643,7 +1660,7 @@ module.exports = (() => {
               React.createElement(
                 "div",
                 { className: "faglist-round-header" },
-                React.createElement("span", { className: "faglist-round-game" }, r.game || "Unbekannt"),
+                React.createElement("span", { className: "faglist-round-game" }, r.info || ""),
                 React.createElement(
                   "span",
                   { style: { display: "flex", alignItems: "center", gap: "8px" } },
@@ -1657,7 +1674,7 @@ module.exports = (() => {
                     : null
                 )
               ),
-              r.info && React.createElement("div", { className: "faglist-round-info" }, r.info),
+              r.game && React.createElement("div", { className: "faglist-round-info" }, r.game),
               React.createElement(
                 "div",
                 { style: { display: "flex", justifyContent: "space-between", marginTop: "6px" } },
