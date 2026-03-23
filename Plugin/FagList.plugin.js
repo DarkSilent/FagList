@@ -1,7 +1,7 @@
 ﻿/**
  * @name FagList
  * @author DarkSilent
- * @version 1.2.0
+ * @version 1.3.0
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
  * @source https://github.com/DarkSilent/FagList
  */
@@ -779,6 +779,80 @@ module.exports = (() => {
       font-style: italic;
       padding: 40px 0;
     }
+    .faglist-update-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 14px;
+      margin: 0 0 8px 0;
+      background: var(--info-warning-background, #faa61a22);
+      border: 1px solid var(--info-warning-foreground, #faa61a);
+      border-radius: 8px;
+      color: var(--text-normal);
+      font-size: 13px;
+    }
+    .faglist-update-banner-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .faglist-update-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: none;
+      background: var(--brand-500, #5865f2);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .faglist-update-btn:hover {
+      background: var(--brand-560, #4752c4);
+    }
+    .faglist-update-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .faglist-update-check-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--background-modifier-accent);
+      background: var(--background-secondary);
+      color: var(--text-normal);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .faglist-update-check-btn:hover {
+      background: var(--background-modifier-hover);
+    }
+    .faglist-update-check-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .faglist-update-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--background-secondary);
+      font-size: 13px;
+      color: var(--text-normal);
+      margin-top: 8px;
+    }
+    .faglist-update-status.available {
+      background: var(--info-warning-background, #faa61a22);
+      border: 1px solid var(--info-warning-foreground, #faa61a);
+    }
+    .faglist-update-status.uptodate {
+      background: var(--info-positive-background, #3ba55d22);
+      border: 1px solid var(--info-positive-foreground, #3ba55d);
+    }
   `;
 
   /* ── API Client ─────────────────────────────────────────── */
@@ -864,6 +938,52 @@ module.exports = (() => {
         body: JSON.stringify({ users }),
       }),
   };
+
+  /* ── Update System ───────────────────────────────────────── */
+  let updateAvailable = false;
+
+  function computeLocalHash() {
+    try {
+      const fs = require("fs");
+      const crypto = require("crypto");
+      const content = fs.readFileSync(__filename, "utf8");
+      return crypto.createHash("sha256").update(content).digest("hex");
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchRemoteHash() {
+    const data = await apiFetch("/api/plugin/hash");
+    return data.hash;
+  }
+
+  async function checkForUpdate() {
+    try {
+      const localHash = computeLocalHash();
+      if (!localHash) return false;
+      const remoteHash = await fetchRemoteHash();
+      updateAvailable = localHash !== remoteHash;
+      return updateAvailable;
+    } catch {
+      return false;
+    }
+  }
+
+  async function performUpdate() {
+    const res = await BdApi.Net.fetch(`${getApiBase()}/api/plugin/download`, {
+      headers: { "x-api-key": getApiKey() },
+    });
+    if (!res.ok) throw new Error(`Download fehlgeschlagen: HTTP ${res.status}`);
+    const content = await res.text();
+    const fs = require("fs");
+    fs.writeFileSync(__filename, content, "utf8");
+    updateAvailable = false;
+    BdApi.UI.showToast("FagList Update installiert! Plugin wird neu geladen…", { type: "success" });
+    setTimeout(() => {
+      BdApi.Plugins.reload(config.info.name);
+    }, 800);
+  }
 
   /* ── Username sync helper ───────────────────────────────── */
   function syncUsernames(ids) {
@@ -1590,6 +1710,21 @@ module.exports = (() => {
       return () => document.removeEventListener("keydown", onKey);
     }, [onClose]);
 
+    const [hasUpdate, setHasUpdate] = useState(updateAvailable);
+    const [updating, setUpdating] = useState(false);
+
+    const handleUpdate = useCallback(async () => {
+      setUpdating(true);
+      try {
+        await performUpdate();
+        setHasUpdate(false);
+      } catch (e) {
+        BdApi.UI.showToast(`Update fehlgeschlagen: ${e.message}`, { type: "error" });
+      } finally {
+        setUpdating(false);
+      }
+    }, []);
+
     const navItems = [
       { id: "ranking", icon: "\uD83C\uDFC6", label: "Ranking" },
       { id: "allnotes", icon: "\uD83D\uDC65", label: "Alle Benutzer" },
@@ -1778,6 +1913,16 @@ module.exports = (() => {
       React.createElement(
         "div",
         { className: "faglist-content-area" },
+        hasUpdate && React.createElement(
+          "div",
+          { className: "faglist-update-banner" },
+          React.createElement("span", { className: "faglist-update-banner-text" }, "\u26A0\uFE0F Ein FagList Update ist verf\u00fcgbar!"),
+          React.createElement(
+            "button",
+            { className: "faglist-update-btn", disabled: updating, onClick: handleUpdate },
+            updating ? "Wird aktualisiert\u2026" : "\uD83D\uDD04 Jetzt updaten"
+          )
+        ),
         React.createElement("div", { className: "faglist-content-header" },
           contentTitle,
           contentHeaderExtra
@@ -2087,6 +2232,12 @@ module.exports = (() => {
         });
 
       this.patchPopout();
+
+      checkForUpdate().then((hasUpdate) => {
+        if (hasUpdate) {
+          BdApi.UI.showToast("FagList Update verf\u00fcgbar! \u00d6ffne die Einstellungen zum Aktualisieren.", { type: "warning", timeout: 8000 });
+        }
+      });
     }
 
     
@@ -2266,7 +2417,59 @@ module.exports = (() => {
       serverInfo.textContent = `Server: ${getApiBase()}`;
       panel.appendChild(serverInfo);
 
-      
+      // ── Update Section ──
+      const updateSep = document.createElement("hr");
+      updateSep.style.cssText = "border:none;border-top:1px solid var(--background-modifier-accent);margin:16px 0";
+      panel.appendChild(updateSep);
+
+      const updateTitle = document.createElement("span");
+      updateTitle.style.cssText = "font-weight:600;color:var(--header-primary);display:block;margin-bottom:8px";
+      updateTitle.textContent = "Update";
+      panel.appendChild(updateTitle);
+
+      const updateStatus = document.createElement("div");
+      updateStatus.className = "faglist-update-status" + (updateAvailable ? " available" : " uptodate");
+      updateStatus.textContent = updateAvailable ? "\u26A0\uFE0F Ein Update ist verf\u00fcgbar!" : "\u2705 Plugin ist aktuell.";
+      panel.appendChild(updateStatus);
+
+      const updateBtnWrap = document.createElement("div");
+      updateBtnWrap.style.cssText = "display:flex;gap:8px;margin-top:10px";
+
+      const checkBtn = document.createElement("button");
+      checkBtn.className = "faglist-update-check-btn";
+      checkBtn.textContent = "\uD83D\uDD0D Auf Updates pr\u00fcfen";
+      checkBtn.addEventListener("click", async () => {
+        checkBtn.disabled = true;
+        checkBtn.textContent = "Pr\u00fcfe\u2026";
+        const hasUpdate = await checkForUpdate();
+        updateStatus.className = "faglist-update-status" + (hasUpdate ? " available" : " uptodate");
+        updateStatus.textContent = hasUpdate ? "\u26A0\uFE0F Ein Update ist verf\u00fcgbar!" : "\u2705 Plugin ist aktuell.";
+        doUpdateBtn.style.display = hasUpdate ? "" : "none";
+        checkBtn.textContent = "\uD83D\uDD0D Auf Updates pr\u00fcfen";
+        checkBtn.disabled = false;
+      });
+      updateBtnWrap.appendChild(checkBtn);
+
+      const doUpdateBtn = document.createElement("button");
+      doUpdateBtn.className = "faglist-update-btn";
+      doUpdateBtn.textContent = "\uD83D\uDD04 Jetzt updaten";
+      doUpdateBtn.style.display = updateAvailable ? "" : "none";
+      doUpdateBtn.addEventListener("click", async () => {
+        doUpdateBtn.disabled = true;
+        doUpdateBtn.textContent = "Wird aktualisiert\u2026";
+        try {
+          await performUpdate();
+          updateStatus.className = "faglist-update-status uptodate";
+          updateStatus.textContent = "\u2705 Update installiert! Plugin wird neu geladen\u2026";
+          doUpdateBtn.style.display = "none";
+        } catch (e) {
+          BdApi.UI.showToast(`Update fehlgeschlagen: ${e.message}`, { type: "error" });
+          doUpdateBtn.textContent = "\uD83D\uDD04 Jetzt updaten";
+          doUpdateBtn.disabled = false;
+        }
+      });
+      updateBtnWrap.appendChild(doUpdateBtn);
+      panel.appendChild(updateBtnWrap);
 
       return panel;
     }
