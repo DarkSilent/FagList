@@ -783,19 +783,56 @@ module.exports = (() => {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 8px 14px;
-      margin: 0 0 8px 0;
+      gap: 8px;
+      padding: 4px 10px;
+      margin: 0;
       background: var(--info-warning-background, #faa61a22);
-      border: 1px solid var(--info-warning-foreground, #faa61a);
-      border-radius: 8px;
+      border-bottom: 1px solid var(--info-warning-foreground, #faa61a44);
       color: var(--text-normal);
-      font-size: 13px;
+      font-size: 12px;
     }
     .faglist-update-banner-text {
       display: flex;
       align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .faglist-update-banner .faglist-update-btn {
+      padding: 2px 10px;
+      font-size: 11px;
+      border-radius: 4px;
+    }
+    .faglist-sidebar-bottom {
+      margin-top: auto;
+      padding-top: 8px;
+    }
+    .faglist-sidebar-update-btn {
+      display: flex;
+      align-items: center;
       gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--interactive-normal);
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      transition: background 0.1s, color 0.1s;
+    }
+    .faglist-sidebar-update-btn:hover {
+      background: var(--background-modifier-hover);
+      color: var(--interactive-hover);
+    }
+    .faglist-sidebar-update-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .faglist-sidebar-update-btn.has-update {
+      color: var(--info-warning-foreground, #faa61a);
     }
     .faglist-update-btn {
       padding: 6px 14px;
@@ -1712,6 +1749,7 @@ module.exports = (() => {
 
     const [hasUpdate, setHasUpdate] = useState(updateAvailable);
     const [updating, setUpdating] = useState(false);
+    const [checking, setChecking] = useState(false);
 
     const handleUpdate = useCallback(async () => {
       setUpdating(true);
@@ -1906,6 +1944,26 @@ module.exports = (() => {
               c.name
             )
           )
+        ),
+        React.createElement(
+          "div",
+          { className: "faglist-sidebar-bottom" },
+          React.createElement(
+            "button",
+            {
+              className: `faglist-sidebar-update-btn${hasUpdate ? " has-update" : ""}`,
+              disabled: checking,
+              onClick: async () => {
+                setChecking(true);
+                const result = await checkForUpdate();
+                setHasUpdate(result);
+                setChecking(false);
+                if (!result) BdApi.UI.showToast("Kein Update verf\u00fcgbar.", { type: "info" });
+              },
+            },
+            React.createElement("span", { className: "faglist-sidebar-icon" }, checking ? "\u23F3" : (hasUpdate ? "\u26A0\uFE0F" : "\uD83D\uDD04")),
+            checking ? "Pr\u00fcfe\u2026" : (hasUpdate ? "Update verf\u00fcgbar!" : "Nach Updates suchen")
+          )
         )
       ),
 
@@ -1916,11 +1974,11 @@ module.exports = (() => {
         hasUpdate && React.createElement(
           "div",
           { className: "faglist-update-banner" },
-          React.createElement("span", { className: "faglist-update-banner-text" }, "\u26A0\uFE0F Ein FagList Update ist verf\u00fcgbar!"),
+          React.createElement("span", { className: "faglist-update-banner-text" }, "\u26A0\uFE0F Update verf\u00fcgbar"),
           React.createElement(
             "button",
             { className: "faglist-update-btn", disabled: updating, onClick: handleUpdate },
-            updating ? "Wird aktualisiert\u2026" : "\uD83D\uDD04 Jetzt updaten"
+            updating ? "Aktualisiert\u2026" : "Updaten"
           )
         ),
         React.createElement("div", { className: "faglist-content-header" },
