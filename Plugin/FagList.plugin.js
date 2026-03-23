@@ -1,7 +1,7 @@
 ﻿/**
  * @name FagList
  * @author DarkSilent
- * @version 1.3.1
+ * @version 1.4.0
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
  * @source https://github.com/DarkSilent/FagList
  */
@@ -25,10 +25,28 @@ module.exports = (() => {
 
   /* ── CSS ─────────────────────────────────────────────────── */
   const css = `
+    /* ── Theme custom properties (mirrors PermissionsViewer --pv-* pattern) ── */
+    .faglist-overlay {
+      --fl-bg-backdrop: rgba(0, 0, 0, 0.85);
+      --fl-bg-modal: #313338;
+      --fl-bg-panel: #2b2d31;
+      --fl-bg-input: #1e1f22;
+      --fl-bg-input-focus: #1a1b1e;
+      --fl-bg-hover: #35373c;
+      --fl-bg-active: #404249;
+      --fl-border: #1e1f22;
+      --fl-text-primary: #f2f3f5;
+      --fl-text-body: #dbdee1;
+      --fl-text-muted: #949ba4;
+      --fl-status-gold: #faa61a;
+    }
+    .faglist-overlay * { box-sizing: border-box; }
+
     .faglist-panel-icon-btn { background: transparent; border: none; color: var(--interactive-normal); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; padding: 0; }
     .faglist-panel-icon-btn:hover { color: var(--interactive-hover); }
+
     .faglist-modal-root {
-      color: var(--text-normal);
+      color: var(--fl-text-body, var(--text-normal));
       padding: 16px 20px;
       width: 100%;
       box-sizing: border-box;
@@ -37,60 +55,79 @@ module.exports = (() => {
     .faglist-scroll-list {
       max-height: 65vh;
       overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--fl-border) transparent;
     }
+
+    /* ── Tabs ── */
     .faglist-tabs {
       display: flex;
-      gap: 4px;
+      gap: 2px;
       margin-bottom: 16px;
-      border-bottom: 2px solid var(--background-modifier-accent);
-      padding-bottom: 10px;
+      border-bottom: 1px solid var(--fl-border, var(--background-modifier-accent));
+      padding-bottom: 0;
     }
     .faglist-tab {
-      padding: 8px 20px;
-      border-radius: 6px 6px 0 0;
+      padding: 8px 16px;
+      border-radius: 4px 4px 0 0;
       cursor: pointer;
       font-weight: 600;
-      font-size: 15px;
+      font-size: 14px;
       background: transparent;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
       border: none;
       transition: background 0.15s, color 0.15s;
     }
     .faglist-tab:hover {
-      background: var(--background-modifier-hover);
-      color: var(--text-normal);
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
+      color: var(--fl-text-primary, var(--text-normal));
     }
     .faglist-tab.active {
-      background: var(--background-modifier-selected);
-      color: var(--text-normal);
-      border-bottom: 2px solid var(--brand-experiment);
-      margin-bottom: -2px;
+      background: var(--fl-bg-active, var(--background-modifier-selected));
+      color: var(--fl-text-primary, var(--text-normal));
+      box-shadow: inset 0 -2px 0 var(--brand-500, #5865f2);
     }
+
+    /* ── Section title with gradient line ── */
     .faglist-section-title {
-      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
-      color: var(--header-secondary);
-      margin: 16px 0 8px;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.5px;
+      color: var(--fl-text-muted, var(--header-secondary));
+      margin: 16px 0 12px;
     }
+    .faglist-section-title::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, #3f4147, transparent);
+    }
+
+    /* ── Average rating ── */
     .faglist-avg {
       display: flex;
       align-items: center;
       gap: 10px;
       margin-bottom: 16px;
-      padding: 12px 16px;
-      border-radius: 10px;
-      background: var(--background-secondary);
+      padding: 12px 14px;
+      border-radius: 4px;
+      background: var(--fl-bg-panel, var(--background-secondary));
     }
     .faglist-avg-label {
       font-weight: 700;
       font-size: 16px;
+      color: var(--fl-text-primary);
     }
     .faglist-avg-value {
       font-size: 14px;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
     }
+
+    /* ── Stars ── */
     .faglist-stars {
       display: inline-flex;
       gap: 2px;
@@ -98,7 +135,7 @@ module.exports = (() => {
     .faglist-star {
       cursor: pointer;
       font-size: 22px;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
       transition: color 0.1s;
       background: none;
       border: none;
@@ -106,28 +143,35 @@ module.exports = (() => {
       line-height: 1;
     }
     .faglist-star.filled {
-      color: #faa61a;
+      color: var(--fl-status-gold, #faa61a);
     }
     .faglist-star.readonly {
       cursor: default;
     }
+
+    /* ── Cards ── */
     .faglist-note-card, .faglist-round-card {
-      background: var(--background-secondary);
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin-bottom: 10px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      border-radius: 4px;
+      padding: 12px 14px;
+      margin-bottom: 2px;
+      transition: background 0.1s;
+    }
+    .faglist-note-card:hover, .faglist-round-card:hover {
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
     }
     .faglist-note-author, .faglist-round-author {
       font-size: 12px;
       font-weight: 600;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
       margin-bottom: 6px;
     }
     .faglist-note-content {
-      font-size: 15px;
+      font-size: 14px;
       white-space: pre-wrap;
       word-break: break-word;
-      line-height: 1.45;
+      line-height: 1.4;
+      color: var(--fl-text-primary, var(--text-normal));
     }
     .faglist-round-header {
       display: flex;
@@ -136,55 +180,62 @@ module.exports = (() => {
       margin-bottom: 6px;
     }
     .faglist-round-game {
-      font-weight: 700;
-      font-size: 15px;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--fl-text-primary);
     }
     .faglist-round-info {
-      font-size: 14px;
-      color: var(--text-muted);
+      font-size: 12px;
+      color: var(--fl-text-muted, var(--text-muted));
       margin-top: 4px;
       line-height: 1.4;
     }
     .faglist-round-date {
       font-size: 12px;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
     }
+
+    /* ── Form elements ── */
     .faglist-textarea {
       width: 100%;
       box-sizing: border-box;
       min-height: 80px;
-      background: var(--background-tertiary);
-      border: 1px solid var(--background-modifier-accent);
-      border-radius: 8px;
-      color: var(--text-normal);
-      padding: 10px 12px;
-      font-size: 15px;
+      background: var(--fl-bg-input, var(--background-tertiary));
+      border: none;
+      border-radius: 4px;
+      color: var(--fl-text-body, var(--text-normal));
+      padding: 9px 12px;
+      font-size: 14px;
       resize: vertical;
       font-family: inherit;
-      line-height: 1.45;
+      line-height: 1.4;
+      outline: none;
     }
     .faglist-textarea:focus {
-      outline: none;
-      border-color: var(--brand-experiment);
+      background: var(--fl-bg-input-focus, var(--background-secondary));
     }
+    .faglist-textarea::placeholder { color: var(--fl-text-muted, var(--text-muted)); }
     .faglist-input {
       width: 100%;
       box-sizing: border-box;
-      background: var(--background-tertiary);
-      border: 1px solid var(--background-modifier-accent);
-      border-radius: 8px;
-      color: var(--text-normal);
-      padding: 10px 12px;
-      font-size: 15px;
+      background: var(--fl-bg-input, var(--background-tertiary));
+      border: none;
+      border-radius: 4px;
+      color: var(--fl-text-body, var(--text-normal));
+      padding: 9px 12px;
+      font-size: 14px;
       font-family: inherit;
+      outline: none;
     }
     .faglist-input:focus {
-      outline: none;
-      border-color: var(--brand-experiment);
+      background: var(--fl-bg-input-focus, var(--background-secondary));
     }
+    .faglist-input::placeholder { color: var(--fl-text-muted, var(--text-muted)); }
+
+    /* ── Buttons ── */
     .faglist-btn {
-      padding: 8px 20px;
-      border-radius: 6px;
+      padding: 8px 16px;
+      border-radius: 4px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
@@ -192,14 +243,14 @@ module.exports = (() => {
       transition: background 0.15s, opacity 0.15s;
     }
     .faglist-btn-primary {
-      background: var(--brand-experiment);
+      background: var(--brand-500, #5865f2);
       color: #fff;
     }
     .faglist-btn-primary:hover {
-      background: var(--brand-experiment-560);
+      background: var(--brand-560, #4752c4);
     }
     .faglist-btn-danger {
-      background: var(--button-danger-background);
+      background: var(--button-danger-background, #da373c);
       color: #fff;
     }
     .faglist-btn-danger:hover {
@@ -219,22 +270,25 @@ module.exports = (() => {
     .faglist-form-row > * {
       flex: 1;
     }
+
+    /* ── State messages ── */
     .faglist-empty {
-      color: var(--text-muted);
-      font-style: italic;
-      font-size: 14px;
-      padding: 16px 0;
+      color: var(--fl-text-muted, var(--text-muted));
+      font-size: 13px;
+      padding: 12px 0;
     }
     .faglist-error {
-      color: var(--text-danger);
-      font-size: 14px;
+      color: var(--text-danger, #f23f43);
+      font-size: 13px;
       padding: 6px 0;
     }
     .faglist-loading {
-      color: var(--text-muted);
-      font-size: 14px;
-      padding: 16px 0;
+      color: var(--fl-text-muted, var(--text-muted));
+      font-size: 13px;
+      padding: 12px 0;
     }
+
+    /* ── Settings panel ── */
     .faglist-settings {
       padding: 16px;
     }
@@ -249,29 +303,33 @@ module.exports = (() => {
       color: var(--text-muted);
       margin-top: 6px;
     }
+
+    /* ── Popout badge ── */
     .faglist-popout-badge {
       display: flex;
       align-items: center;
       gap: 8px;
       padding: 8px 12px;
       margin: 4px 12px;
-      background: var(--background-secondary);
-      border-radius: 8px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      border-radius: 4px;
       cursor: pointer;
       transition: background 0.15s;
     }
     .faglist-popout-badge:hover {
-      background: var(--background-modifier-hover);
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
     }
     .faglist-popout-label {
       font-size: 13px;
       font-weight: 700;
-      color: var(--header-secondary);
+      color: var(--fl-text-muted, var(--header-secondary));
     }
+
+    /* ── Delete ── */
     .faglist-delete-btn {
       background: none;
       border: none;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
       cursor: pointer;
       font-size: 16px;
       padding: 2px 6px;
@@ -279,77 +337,84 @@ module.exports = (() => {
       transition: color 0.15s, background 0.15s;
     }
     .faglist-delete-btn:hover {
-      color: var(--text-danger);
-      background: var(--background-modifier-hover);
+      color: var(--text-danger, #f23f43);
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
     }
-    /* ── Ranking table ─────────────────────────── */
+
+    /* ── Ranking table ── */
     .faglist-ranking-table {
       width: 100%;
       border-collapse: separate;
-      border-spacing: 0 4px;
+      border-spacing: 0 2px;
     }
     .faglist-ranking-table th {
       text-align: left;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      color: var(--header-secondary);
+      letter-spacing: 0.5px;
+      color: var(--fl-text-muted, var(--header-secondary));
       padding: 8px 12px;
-      letter-spacing: 0.02em;
     }
     .faglist-ranking-table td {
-      background: var(--background-secondary);
+      background: var(--fl-bg-panel, var(--background-secondary));
       padding: 10px 12px;
       font-size: 14px;
+      color: var(--fl-text-body);
+    }
+    .faglist-ranking-table tbody tr:hover td {
+      background: var(--fl-bg-hover);
     }
     .faglist-ranking-table tr td:first-child {
-      border-radius: 8px 0 0 8px;
+      border-radius: 4px 0 0 4px;
     }
     .faglist-ranking-table tr td:last-child {
-      border-radius: 0 8px 8px 0;
+      border-radius: 0 4px 4px 0;
     }
     .faglist-rank-num {
       font-weight: 700;
       font-size: 16px;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
       min-width: 32px;
       text-align: center;
     }
-    .faglist-rank-gold { color: #faa61a; }
+    .faglist-rank-gold { color: var(--fl-status-gold, #faa61a); }
     .faglist-rank-silver { color: #b0b0b0; }
     .faglist-rank-bronze { color: #cd7f32; }
     .faglist-rank-name {
-      font-weight: 600;
-      font-size: 15px;
+      font-weight: 500;
+      font-size: 14px;
       cursor: pointer;
+      color: var(--fl-text-primary);
     }
     .faglist-rank-name:hover {
       text-decoration: underline;
-      color: var(--brand-experiment);
+      color: var(--brand-500, #5865f2);
     }
     .faglist-note-date {
       font-size: 11px;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
       margin-top: 4px;
     }
-    /* ── Admin settings ─────────────────────────── */
+
+    /* ── Admin settings ── */
     .faglist-admin-section {
       margin-top: 20px;
       padding-top: 16px;
-      border-top: 1px solid var(--background-modifier-accent);
+      border-top: 1px solid var(--fl-border, var(--background-modifier-accent));
     }
     .faglist-admin-section h3 {
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
-      color: var(--header-primary);
+      color: var(--fl-text-primary, var(--header-primary));
       margin: 0 0 10px;
       text-transform: uppercase;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.5px;
     }
     .faglist-admin-table {
       width: 100%;
       border-collapse: separate;
-      border-spacing: 0 4px;
+      border-spacing: 0 2px;
       margin-bottom: 12px;
     }
     .faglist-admin-table th {
@@ -357,20 +422,24 @@ module.exports = (() => {
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      color: var(--header-secondary);
+      letter-spacing: 0.5px;
+      color: var(--fl-text-muted, var(--header-secondary));
       padding: 4px 8px;
     }
     .faglist-admin-table td {
-      background: var(--background-secondary);
+      background: var(--fl-bg-panel, var(--background-secondary));
       padding: 8px;
       font-size: 13px;
-      color: var(--text-normal);
+      color: var(--fl-text-body, var(--text-normal));
+    }
+    .faglist-admin-table tbody tr:hover td {
+      background: var(--fl-bg-hover);
     }
     .faglist-admin-table tr td:first-child {
-      border-radius: 6px 0 0 6px;
+      border-radius: 4px 0 0 4px;
     }
     .faglist-admin-table tr td:last-child {
-      border-radius: 0 6px 6px 0;
+      border-radius: 0 4px 4px 0;
     }
     .faglist-admin-table .faglist-input {
       padding: 4px 8px;
@@ -398,55 +467,56 @@ module.exports = (() => {
       user-select: all;
       word-break: break-all;
     }
-    /* ── All Notes / Channel views ──────────────── */
+
+    /* ── All Notes / Channel views ── */
     .faglist-notes-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 16px;
+      gap: 12px;
       align-items: start;
     }
     .faglist-notes-grid-card {
-      background: var(--background-secondary);
-      border-radius: 8px;
-      padding: 16px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      border-radius: 4px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
     }
     .faglist-notes-grid-header {
-      font-weight: bold;
-      font-size: 16px;
-      color: var(--header-primary);
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--fl-text-primary, var(--header-primary));
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--background-modifier-accent);
+      border-bottom: 1px solid var(--fl-border, var(--background-modifier-accent));
       padding-bottom: 8px;
       cursor: pointer;
     }
     .faglist-notes-grid-header:hover {
-      color: var(--brand-experiment);
+      color: var(--brand-500, #5865f2);
     }
     .faglist-user-group {
-      margin-bottom: 6px;
+      margin-bottom: 2px;
     }
     .faglist-user-group-header {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 14px;
-      background: var(--background-secondary);
-      border-radius: 8px;
+      padding: 8px 10px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      border-radius: 4px;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.1s;
       user-select: none;
     }
     .faglist-user-group-header:hover {
-      background: var(--background-modifier-hover);
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
     }
     .faglist-expand-icon {
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: 10px;
+      color: var(--fl-text-muted, var(--text-muted));
       transition: transform 0.2s;
       display: inline-block;
     }
@@ -454,86 +524,160 @@ module.exports = (() => {
       transform: rotate(90deg);
     }
     .faglist-group-name {
-      font-weight: 600;
-      font-size: 15px;
+      font-weight: 500;
+      font-size: 14px;
       flex: 1;
+      color: var(--fl-text-body);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
     .faglist-group-name:hover {
-      color: var(--brand-experiment);
-      text-decoration: underline;
+      color: var(--fl-text-primary);
     }
     .faglist-group-count {
       font-size: 12px;
-      color: var(--text-muted);
-      background: var(--background-tertiary);
+      color: var(--fl-text-muted, var(--text-muted));
+      background: color-mix(in srgb, var(--fl-text-muted) 12%, transparent);
       padding: 2px 8px;
-      border-radius: 10px;
+      border-radius: 3px;
+      font-weight: 500;
     }
     .faglist-group-notes {
-      padding: 6px 0 6px 24px;
+      padding: 4px 0 4px 20px;
     }
     .faglist-channel-info {
       display: flex;
       align-items: center;
       gap: 8px;
       padding: 10px 14px;
-      background: var(--background-secondary);
-      border-radius: 8px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      border-radius: 4px;
       margin-bottom: 14px;
     }
     .faglist-channel-name {
-      font-weight: 700;
-      font-size: 15px;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--fl-text-primary);
     }
     .faglist-channel-count {
       font-size: 13px;
-      color: var(--text-muted);
+      color: var(--fl-text-muted, var(--text-muted));
     }
-    /* ── Fullscreen Panel (Settings-like) ──────── */
+
+    /* ── Fullscreen Panel (Settings-like) ── */
     .faglist-backdrop-overlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.75);
+      inset: 0;
+      background: var(--fl-bg-backdrop, rgba(0, 0, 0, 0.85));
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 100;
-      animation: faglist-fade-in 0.15s ease;
+      padding: 20px;
+      z-index: 1000;
+      animation: faglist-fade-in 0.2s ease;
     }
-
     .faglist-overlay {
       display: flex;
-      width: 75vw;
-      height: 75vh;
-      background: var(--bg-overlay-app-frame, var(--background-primary, #313338));
-      color: var(--text-normal, #dbdee1);
-      border-radius: 12px;
+      flex-direction: column;
+      width: min(1350px, 100%);
+      height: 60vh;
+      background: var(--fl-bg-modal, #313338);
+      color: var(--fl-text-body, #dbdee1);
+      border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      position: relative;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+      animation: faglist-scale-in 0.2s ease;
     }
     @keyframes faglist-fade-in {
       from { opacity: 0; }
       to   { opacity: 1; }
     }
+    @keyframes faglist-scale-in {
+      from { transform: scale(0.95); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    /* ── Header bar (PV-style) ── */
+    .faglist-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      background: var(--fl-bg-panel, #2b2d31);
+      border-bottom: 1px solid var(--fl-border, #1e1f22);
+      flex-shrink: 0;
+    }
+    .faglist-header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .faglist-header-title h2 {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--fl-text-primary, #f2f3f5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0;
+    }
+    .faglist-header-title p {
+      margin: 2px 0 0 0;
+      font-size: 13px;
+      color: var(--fl-text-muted, #949ba4);
+    }
+    .faglist-close-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--fl-text-muted, #949ba4);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: color 0.1s, background 0.1s;
+    }
+    .faglist-close-btn:hover {
+      color: var(--fl-text-body, #dbdee1);
+      background: var(--fl-bg-hover, #3f4147);
+    }
+    .faglist-close-btn svg {
+      display: block;
+    }
+
+    /* ── Body row (sidebar + content) ── */
+    .faglist-body-row {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
     .faglist-sidebar {
-      width: 230px;
-      min-width: 230px;
-      background: var(--bg-overlay-3, var(--background-secondary, #2b2d31));
       display: flex;
       flex-direction: column;
-      padding: 60px 12px 20px;
+      width: 240px;
+      min-width: 240px;
+      background: var(--fl-bg-panel, #2b2d31);
+      border-right: 1px solid var(--fl-border, #1e1f22);
       overflow-y: auto;
-      box-sizing: border-box;
+      padding: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--fl-border) transparent;
     }
     .faglist-sidebar-title {
+      color: var(--fl-text-muted);
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--header-secondary);
-      padding: 8px 12px 6px;
-      margin-top: 8px;
+      letter-spacing: 0.5px;
+      padding: 8px 8px 4px;
+      margin-top: 16px;
     }
     .faglist-sidebar-title:first-child {
       margin-top: 0;
@@ -541,82 +685,86 @@ module.exports = (() => {
     .faglist-sidebar-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 6px;
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 2px;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 4px;
+      text-align: left;
       cursor: pointer;
       font-size: 14px;
       font-weight: 500;
-      color: var(--interactive-normal);
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-      transition: background 0.1s, color 0.1s;
+      color: var(--fl-text-body, #dbdee1);
+      background: transparent;
+      transition: color 0.1s, background 0.1s;
     }
     .faglist-sidebar-item:hover {
-      background: var(--background-modifier-hover);
-      color: var(--interactive-hover);
+      color: var(--fl-text-primary, #f2f3f5);
+      background: var(--fl-bg-hover, #35373c);
     }
     .faglist-sidebar-item.active {
-      background: var(--background-modifier-selected);
-      color: var(--interactive-active);
+      color: var(--fl-text-primary, #f2f3f5);
+      background: var(--fl-bg-active, #404249);
     }
     .faglist-sidebar-icon {
       font-size: 16px;
-      width: 22px;
+      width: 20px;
       text-align: center;
+      flex-shrink: 0;
     }
     .faglist-sidebar-sep {
       height: 1px;
-      background: var(--background-modifier-accent);
-      margin: 8px 12px;
+      background: var(--fl-border, #1e1f22);
+      margin: 8px 8px;
     }
+
+    /* ── Content area ── */
     .faglist-content-area {
       flex: 1;
       display: flex;
       flex-direction: column;
-      box-sizing: border-box;
-      max-width: none;
-      background: transparent;
       overflow: hidden;
     }
     .faglist-content-header {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--header-primary);
-      padding: 60px 40px 20px;
-      margin: 0;
-      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--fl-bg-panel);
+      border-bottom: 1px solid var(--fl-border);
       gap: 16px;
+      flex-shrink: 0;
+    }
+    .faglist-content-header-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fl-text-primary, #f2f3f5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .faglist-content-header-search {
       flex-shrink: 0;
       position: relative;
     }
     .faglist-content-header-search input {
-      width: 240px;
+      width: 220px;
       box-sizing: border-box;
-      padding: 8px 34px 8px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--brand-500, #5865f2);
-      background: var(--background-tertiary);
-      color: var(--text-normal);
+      padding: 9px 32px 9px 36px;
+      border-radius: 4px;
+      border: none;
+      background: var(--fl-bg-input, #1e1f22);
+      color: var(--fl-text-body, #dbdee1);
       font-size: 14px;
       font-weight: 400;
       outline: none;
-      transition: background 0.15s;
     }
     .faglist-content-header-search input::placeholder {
-      color: var(--text-muted);
+      color: var(--fl-text-muted, #949ba4);
     }
     .faglist-content-header-search input:focus {
-      border-color: var(--brand-400, #7983f5);
-      background: var(--background-secondary);
-      box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
+      background: var(--fl-bg-input-focus, #1a1b1e);
     }
     .faglist-content-header-search .faglist-search-clear {
       position: absolute;
@@ -627,88 +775,59 @@ module.exports = (() => {
     .faglist-content-body {
       flex: 1;
       overflow-y: auto;
-      padding: 0 40px 40px;
+      padding: 20px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--fl-border) transparent;
     }
     .faglist-content-body .faglist-scroll-list,
     .faglist-content-body .faglist-modal-root {
       max-height: none;
       overflow-y: visible;
     }
-    .faglist-close-area {
-      position: absolute;
-      top: 16px;
-      right: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 101;
-    }
-    .faglist-close-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 2px solid var(--interactive-normal);
-      background: transparent;
-      color: var(--interactive-normal);
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .faglist-close-btn:hover {
-      border-color: var(--interactive-hover);
-      color: var(--interactive-hover);
-    }
-    .faglist-close-hint {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--interactive-normal);
-    }
+
+    /* ── Back button ── */
     .faglist-back-btn {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 6px 12px;
       margin-bottom: 12px;
-      border-radius: 6px;
+      border-radius: 4px;
       border: none;
-      background: var(--background-secondary);
-      color: var(--text-muted);
+      background: var(--fl-bg-panel, var(--background-secondary));
+      color: var(--fl-text-muted);
       cursor: pointer;
       font-size: 13px;
-      font-weight: 600;
-      transition: background 0.15s, color 0.15s;
+      font-weight: 500;
+      transition: background 0.1s, color 0.1s;
     }
     .faglist-back-btn:hover {
-      background: var(--background-modifier-hover);
-      color: var(--text-normal);
+      background: var(--fl-bg-hover);
+      color: var(--fl-text-primary);
     }
+
+    /* ── Sidebar search ── */
     .faglist-search-wrap {
       position: relative;
-      padding: 0 12px 12px;
+      padding: 0 0 8px;
     }
     .faglist-search-input {
       width: 100%;
       box-sizing: border-box;
-      padding: 8px 34px 8px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--brand-500, #5865f2);
-      background: var(--background-tertiary);
-      color: var(--text-normal);
+      padding: 9px 32px 9px 12px;
+      border-radius: 4px;
+      border: none;
+      background: var(--fl-bg-input, #1e1f22);
+      color: var(--fl-text-body, #dbdee1);
       font-size: 14px;
       font-weight: 400;
       outline: none;
-      transition: background 0.15s;
     }
     .faglist-search-input::placeholder {
-      color: var(--text-muted);
+      color: var(--fl-text-muted, #949ba4);
     }
     .faglist-search-input:focus {
-      border-color: var(--brand-400, #7983f5);
-      background: var(--background-secondary);
-      box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
+      background: var(--fl-bg-input-focus, #1a1b1e);
     }
     .faglist-search-clear {
       position: absolute;
@@ -717,10 +836,10 @@ module.exports = (() => {
       transform: translateY(-50%);
       width: 22px;
       height: 22px;
-      border-radius: 50%;
+      border-radius: 4px;
       border: none;
       background: transparent;
-      color: var(--interactive-normal);
+      color: var(--fl-text-muted, #949ba4);
       font-size: 14px;
       cursor: pointer;
       display: flex;
@@ -729,34 +848,36 @@ module.exports = (() => {
       padding: 0;
     }
     .faglist-search-clear:hover {
-      color: var(--interactive-hover);
-      background: var(--background-modifier-hover);
+      color: var(--fl-text-body);
+      background: var(--fl-bg-hover);
     }
+
+    /* ── Search results ── */
     .faglist-search-results {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 2px;
     }
     .faglist-search-result-card {
-      background: var(--background-secondary);
-      border-radius: 8px;
-      padding: 12px 16px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      border-radius: 4px;
+      padding: 12px 14px;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.1s;
     }
     .faglist-search-result-card:hover {
-      background: var(--background-modifier-hover);
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
     }
     .faglist-search-result-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--header-primary);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--fl-text-primary, var(--header-primary));
       margin-bottom: 4px;
     }
     .faglist-search-history {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
       margin-top: 6px;
     }
     .faglist-search-history-tag {
@@ -764,21 +885,22 @@ module.exports = (() => {
       align-items: center;
       gap: 4px;
       padding: 2px 8px;
-      border-radius: 12px;
-      background: var(--background-tertiary);
-      color: var(--text-muted);
+      border-radius: 3px;
+      background: color-mix(in srgb, var(--fl-text-muted) 12%, transparent);
+      color: var(--fl-text-muted, var(--text-muted));
       font-size: 12px;
     }
     .faglist-search-highlight {
-      color: var(--text-link);
+      color: var(--brand-500, #5865f2);
       font-weight: 600;
     }
     .faglist-search-empty {
       text-align: center;
-      color: var(--text-muted);
-      font-style: italic;
+      color: var(--fl-text-muted, var(--text-muted));
       padding: 40px 0;
     }
+
+    /* ── Update related ── */
     .faglist-update-banner {
       display: flex;
       align-items: center;
@@ -788,7 +910,7 @@ module.exports = (() => {
       margin: 0;
       background: var(--info-warning-background, #faa61a22);
       border-bottom: 1px solid var(--info-warning-foreground, #faa61a44);
-      color: var(--text-normal);
+      color: var(--fl-text-body, var(--text-normal));
       font-size: 12px;
     }
     .faglist-update-banner-text {
@@ -796,7 +918,7 @@ module.exports = (() => {
       align-items: center;
       gap: 6px;
       font-size: 12px;
-      color: var(--text-muted);
+      color: var(--fl-text-muted);
     }
     .faglist-update-banner .faglist-update-btn {
       padding: 2px 10px;
@@ -810,33 +932,33 @@ module.exports = (() => {
     .faglist-sidebar-update-btn {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 6px;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 4px;
       cursor: pointer;
       font-size: 13px;
       font-weight: 500;
-      color: var(--interactive-normal);
+      color: var(--fl-text-body, #dbdee1);
       border: none;
-      background: none;
+      background: transparent;
       width: 100%;
       text-align: left;
       transition: background 0.1s, color 0.1s;
     }
     .faglist-sidebar-update-btn:hover {
-      background: var(--background-modifier-hover);
-      color: var(--interactive-hover);
+      background: var(--fl-bg-hover);
+      color: var(--fl-text-primary);
     }
     .faglist-sidebar-update-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
     .faglist-sidebar-update-btn.has-update {
-      color: var(--info-warning-foreground, #faa61a);
+      color: var(--fl-status-gold, #faa61a);
     }
     .faglist-update-btn {
       padding: 6px 14px;
-      border-radius: 6px;
+      border-radius: 4px;
       border: none;
       background: var(--brand-500, #5865f2);
       color: #fff;
@@ -855,17 +977,17 @@ module.exports = (() => {
     }
     .faglist-update-check-btn {
       padding: 6px 14px;
-      border-radius: 6px;
-      border: 1px solid var(--background-modifier-accent);
-      background: var(--background-secondary);
-      color: var(--text-normal);
+      border-radius: 4px;
+      border: none;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      color: var(--fl-text-body, var(--text-normal));
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.15s;
     }
     .faglist-update-check-btn:hover {
-      background: var(--background-modifier-hover);
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
     }
     .faglist-update-check-btn:disabled {
       opacity: 0.6;
@@ -876,19 +998,128 @@ module.exports = (() => {
       align-items: center;
       gap: 10px;
       padding: 10px 14px;
-      border-radius: 8px;
-      background: var(--background-secondary);
+      border-radius: 4px;
+      background: var(--fl-bg-panel, var(--background-secondary));
       font-size: 13px;
-      color: var(--text-normal);
+      color: var(--fl-text-body, var(--text-normal));
       margin-top: 8px;
     }
     .faglist-update-status.available {
-      background: var(--info-warning-background, #faa61a22);
-      border: 1px solid var(--info-warning-foreground, #faa61a);
+      background: color-mix(in srgb, var(--fl-status-gold) 12%, transparent);
+      border: 1px solid var(--fl-status-gold, #faa61a);
     }
     .faglist-update-status.uptodate {
-      background: var(--info-positive-background, #3ba55d22);
-      border: 1px solid var(--info-positive-foreground, #3ba55d);
+      background: color-mix(in srgb, #23a55a 12%, transparent);
+      border: 1px solid #23a55a;
+    }
+
+    /* ── User summary header ── */
+    .faglist-user-summary {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+    }
+    .faglist-user-summary-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--fl-text-muted, var(--text-muted));
+      font-weight: 500;
+    }
+    .faglist-user-summary-stat strong {
+      font-weight: 700;
+      color: var(--fl-text-primary, var(--text-normal));
+    }
+    .faglist-user-summary .faglist-stars {
+      margin-left: auto;
+    }
+    .faglist-btn-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      background: var(--fl-bg-panel, var(--background-secondary));
+      color: var(--fl-text-body, var(--text-normal));
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .faglist-btn-icon:hover {
+      background: var(--fl-bg-hover, var(--background-modifier-hover));
+      color: var(--fl-text-primary);
+    }
+
+    /* ── Scrollbar (webkit fallback) ── */
+    .faglist-sidebar::-webkit-scrollbar,
+    .faglist-content-body::-webkit-scrollbar,
+    .faglist-scroll-list::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .faglist-sidebar::-webkit-scrollbar-track,
+    .faglist-content-body::-webkit-scrollbar-track,
+    .faglist-scroll-list::-webkit-scrollbar-track {
+      background: transparent;
+      border: 2px solid transparent;
+      border-radius: 4px;
+    }
+    .faglist-sidebar::-webkit-scrollbar-thumb,
+    .faglist-content-body::-webkit-scrollbar-thumb,
+    .faglist-scroll-list::-webkit-scrollbar-thumb {
+      background-color: rgba(32,34,37,.6);
+      border: 2px solid transparent;
+      border-radius: 4px;
+      background-clip: padding-box;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .faglist-overlay {
+        width: 100%;
+        height: 95vh;
+        border-radius: 0;
+      }
+      .faglist-body-row {
+        flex-direction: column;
+      }
+      .faglist-sidebar {
+        width: 100%;
+        min-width: 100%;
+        max-height: 200px;
+        border-right: none;
+        border-bottom: 1px solid var(--fl-border, #1e1f22);
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 4px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 8px;
+      }
+      .faglist-sidebar-title {
+        display: none;
+      }
+      .faglist-sidebar-item {
+        flex-shrink: 0;
+        width: auto;
+      }
+      .faglist-sidebar-sep {
+        display: none;
+      }
+      .faglist-sidebar-bottom {
+        margin-top: 0;
+      }
+      .faglist-content-body {
+        padding: 12px;
+      }
     }
   `;
 
@@ -1086,7 +1317,7 @@ module.exports = (() => {
   }
 
   /* ── Notes Tab ──────────────────────────────────────────── */
-  function NotesTab({ targetId, targetName }) {
+  function NotesTab({ targetId, targetName, onChanged }) {
     const [notes, setNotes] = useState([]);
     const [myNote, setMyNote] = useState("");
     const [myNoteDate, setMyNoteDate] = useState(null);
@@ -1173,6 +1404,7 @@ module.exports = (() => {
         setError(null);
         await api.saveNote(targetId, myNote.trim(), targetName);
         await load();
+        if (onChanged) onChanged();
       } catch (e) {
         setError(e.message);
       }
@@ -1185,6 +1417,7 @@ module.exports = (() => {
         setMyNote("");
         setMyNoteDate(null);
         await load();
+        if (onChanged) onChanged();
       } catch (e) {
         setError(e.message);
       }
@@ -1215,7 +1448,7 @@ module.exports = (() => {
         { className: "faglist-btn-row" },
         React.createElement("button", { className: "faglist-btn faglist-btn-primary", onClick: save }, "Speichern"),
         React.createElement("button", { className: "faglist-btn faglist-btn-danger", onClick: remove }, "L\u00f6schen"),
-        React.createElement("button", { className: "faglist-btn", onClick: importDiscordNote, style: { background: "var(--background-modifier-accent)", color: "var(--text-normal)" } }, "\uD83D\uDCCB Discord-Notiz \u00fcbernehmen")
+        React.createElement("button", { className: "faglist-btn-icon", onClick: importDiscordNote, title: "Discord-Notiz \u00fcbernehmen" }, "\uD83D\uDCCB")
       ),
       myNoteDate && React.createElement("div", { className: "faglist-note-date" }, `Zuletzt bearbeitet: ${fmtDate(myNoteDate)}`),
 
@@ -1321,7 +1554,7 @@ module.exports = (() => {
   }
 
   /* ── Rounds Tab ─────────────────────────────────────────── */
-  function RoundsTab({ targetId, targetName }) {
+  function RoundsTab({ targetId, targetName, onChanged }) {
     const [rounds, setRounds] = useState([]);
     const [avgRating, setAvgRating] = useState(null);
     const [totalRounds, setTotalRounds] = useState(0);
@@ -1357,6 +1590,7 @@ module.exports = (() => {
         setError(null);
         await api.deleteRound(id);
         await load();
+        if (onChanged) onChanged();
       } catch (e) {
         setError(e.message);
       }
@@ -1390,7 +1624,7 @@ module.exports = (() => {
           "button",
           {
             className: "faglist-btn faglist-btn-primary",
-            onClick: () => openAddRoundDialog(targetId, targetName, load),
+            onClick: () => openAddRoundDialog(targetId, targetName, () => { load(); if (onChanged) onChanged(); }),
           },
           "+ Runde hinzuf\u00fcgen"
         )
@@ -1536,45 +1770,69 @@ module.exports = (() => {
   }
 
   /* ── Modal Component (User — still used inside panel) ──── */
-  function FagListModal({ targetId, targetName }) {
+  function FagListModal({ targetId, targetName, onSummary }) {
     const [tab, setTab] = useState("notes");
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 850);
+    const [summary, setSummary] = useState({ noteCount: 0, roundCount: 0, avgRating: null });
 
     useEffect(() => {
-      const handleResize = () => setIsMobile(window.innerWidth < 850);
-      window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
-    }, []);
+      let cancelled = false;
+      (async () => {
+        try {
+          const [notesData, roundsData] = await Promise.all([
+            api.getNotes(targetId),
+            api.getRounds(targetId),
+          ]);
+          if (!cancelled) {
+            const s = {
+              noteCount: notesData.notes?.length ?? 0,
+              roundCount: roundsData.totalRounds ?? roundsData.rounds?.length ?? 0,
+              avgRating: roundsData.avgRating ?? null,
+            };
+            setSummary(s);
+            if (onSummary) onSummary(s);
+          }
+        } catch (_) {}
+      })();
+      return () => { cancelled = true; };
+    }, [targetId]);
 
-    if (!isMobile) {
-      return React.createElement(
-        "div",
-        { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" } },
-        React.createElement("div", null, React.createElement(NotesTab, { targetId, targetName })),
-        React.createElement("div", null, React.createElement(RoundsTab, { targetId, targetName }))
-      );
-    }
+    const refreshSummary = useCallback(async () => {
+      try {
+        const [notesData, roundsData] = await Promise.all([
+          api.getNotes(targetId),
+          api.getRounds(targetId),
+        ]);
+        const s = {
+          noteCount: notesData.notes?.length ?? 0,
+          roundCount: roundsData.totalRounds ?? roundsData.rounds?.length ?? 0,
+          avgRating: roundsData.avgRating ?? null,
+        };
+        setSummary(s);
+        if (onSummary) onSummary(s);
+      } catch (_) {}
+    }, [targetId, onSummary]);
 
     return React.createElement(
       "div",
       null,
+      // Tabs
       React.createElement(
         "div",
         { className: "faglist-tabs" },
         React.createElement(
           "button",
           { className: `faglist-tab${tab === "notes" ? " active" : ""}`, onClick: () => setTab("notes") },
-          "\uD83D\uDDD2\uFE0F Notizen"
+          `\uD83D\uDDD2\uFE0F Notizen (${summary.noteCount})`
         ),
         React.createElement(
           "button",
           { className: `faglist-tab${tab === "rounds" ? " active" : ""}`, onClick: () => setTab("rounds") },
-          "\uD83C\uDFAE Runden"
+          `\uD83C\uDFAE Runden (${summary.roundCount})`
         )
       ),
       tab === "notes"
-        ? React.createElement(NotesTab, { targetId, targetName })
-        : React.createElement(RoundsTab, { targetId, targetName })
+        ? React.createElement(NotesTab, { targetId, targetName, onChanged: refreshSummary })
+        : React.createElement(RoundsTab, { targetId, targetName, onChanged: refreshSummary })
     );
   }
 
@@ -1773,6 +2031,7 @@ module.exports = (() => {
     ];
 
     const [searchPageQuery, setSearchPageQuery] = useState("");
+    const [userSummary, setUserSummary] = useState({ noteCount: 0, roundCount: 0, avgRating: null });
 
     let contentTitle = "";
     let contentBody = null;
@@ -1821,19 +2080,28 @@ module.exports = (() => {
         break;
       case "user":
         contentTitle = selectedUser?.name || "Nutzer";
-        contentBody = React.createElement(
+        contentHeaderExtra = React.createElement(
           "div",
-          null,
+          { style: { display: "flex", alignItems: "center", gap: "12px" } },
+          userSummary.avgRating != null
+            ? React.createElement(
+                React.Fragment,
+                null,
+                React.createElement(Stars, { value: Math.round(userSummary.avgRating), readonly: true, size: 18 }),
+                React.createElement("span", { style: { fontSize: "13px", color: "var(--fl-text-muted)" } }, userSummary.avgRating.toFixed(2))
+              )
+            : null,
           React.createElement(
             "button",
-            { className: "faglist-back-btn", onClick: goBack },
+            { className: "faglist-back-btn", onClick: goBack, style: { margin: 0 } },
             "\u2190 Zur\u00fcck"
-          ),
-          React.createElement(FagListModal, {
-            targetId: selectedUser?.id,
-            targetName: selectedUser?.name,
-          })
+          )
         );
+        contentBody = React.createElement(FagListModal, {
+          targetId: selectedUser?.id,
+          targetName: selectedUser?.name,
+          onSummary: setUserSummary,
+        });
         break;
     }
 
@@ -1847,23 +2115,33 @@ module.exports = (() => {
           onClick: (e) => e.stopPropagation()
         },
 
-        // Close button
+        // Header bar
       React.createElement(
         "div",
-        { className: "faglist-close-area" },
-        React.createElement("span", { className: "faglist-close-hint" }, "ESC"),
+        { className: "faglist-header-bar" },
+        React.createElement(
+          "div",
+          { className: "faglist-header-title" },
+          React.createElement("h2", null, "FagList")
+        ),
         React.createElement(
           "button",
-          { className: "faglist-close-btn", onClick: onClose },
-          "\u2715"
+          { className: "faglist-close-btn", onClick: onClose, "aria-label": "Close" },
+          React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24" },
+            React.createElement("path", { fill: "currentColor", d: "M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" })
+          )
         )
       ),
+
+      // Body row
+      React.createElement(
+        "div",
+        { className: "faglist-body-row" },
 
       // Sidebar
       React.createElement(
         "div",
         { className: "faglist-sidebar" },
-        React.createElement("div", { className: "faglist-sidebar-title" }, "FagList"),
         React.createElement(
           "div",
           { className: "faglist-search-wrap" },
@@ -1898,18 +2176,6 @@ module.exports = (() => {
             },
             React.createElement("span", { className: "faglist-sidebar-icon" }, item.icon),
             item.label
-          )
-        ),
-        selectedUser && React.createElement(
-          "div",
-          null,
-          React.createElement("div", { className: "faglist-sidebar-sep" }),
-          React.createElement("div", { className: "faglist-sidebar-title" }, "Gewählter Nutzer"),
-          React.createElement(
-            "button",
-            { className: "faglist-sidebar-item active" },
-            React.createElement("span", { className: "faglist-sidebar-icon" }, "\uD83D\uDC64"),
-            selectedUser.name
           )
         ),
         currentVoiceUsers.length > 0 && React.createElement(
@@ -1996,7 +2262,7 @@ module.exports = (() => {
         "div",
         { className: "faglist-content-area" },
         React.createElement("div", { className: "faglist-content-header" },
-          contentTitle,
+          React.createElement("span", { className: "faglist-content-header-title" }, contentTitle),
           contentHeaderExtra
         ),
         React.createElement(
@@ -2005,7 +2271,8 @@ module.exports = (() => {
           contentBody
         )
       )
-      )
+      ) // close body-row
+      ) // close overlay
     );
   }
 
