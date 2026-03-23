@@ -983,7 +983,7 @@ module.exports = (() => {
     try {
       const fs = require("fs");
       const crypto = require("crypto");
-      const content = fs.readFileSync(__filename, "utf8").replace(/\r\n/g, "\n");
+      const content = fs.readFileSync(__filename, "utf8").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
       return crypto.createHash("sha256").update(content).digest("hex");
     } catch {
       return null;
