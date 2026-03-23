@@ -1,7 +1,7 @@
 ﻿/**
  * @name FagList
  * @author DarkSilent
- * @version 1.3.0
+ * @version 1.3.1
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
  * @source https://github.com/DarkSilent/FagList
  */
@@ -962,6 +962,7 @@ module.exports = (() => {
       }),
 
     getAllNotes: () => apiFetch("/api/notes/all"),
+    getRecentNotes: (limit = 50) => apiFetch(`/api/notes/recent?limit=${limit}`),
     batchUsers: (ids) =>
       apiFetch("/api/users/batch", {
         method: "POST",
@@ -1765,6 +1766,7 @@ module.exports = (() => {
 
     const navItems = [
       { id: "ranking", icon: "\uD83C\uDFC6", label: "Ranking" },
+      { id: "recent", icon: "\uD83D\uDD59", label: "Letzte \u00C4nderungen" },
       { id: "allnotes", icon: "\uD83D\uDC65", label: "Alle Benutzer" },
       { id: "search", icon: "\uD83D\uDD0D", label: "Suche" },
       { id: "channel", icon: "\uD83D\uDD0A", label: "Voice Channel" },
@@ -1784,6 +1786,10 @@ module.exports = (() => {
       case "ranking":
         contentTitle = "Ranking";
         contentBody = React.createElement(OverviewTab, { openUserModal: openUserPage });
+        break;
+      case "recent":
+        contentTitle = "Letzte \u00C4nderungen";
+        contentBody = React.createElement(RecentChangesTab, { openUserModal: openUserPage });
         break;
       case "allnotes":
         contentTitle = "Alle Benutzer";
@@ -2000,6 +2006,67 @@ module.exports = (() => {
         )
       )
       )
+    );
+  }
+
+  /* ── Recent Changes Tab ──────────────────────────────────── */
+  function RecentChangesTab({ openUserModal }) {
+    const [notes, setNotes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const load = useCallback(async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await api.getRecentNotes(50);
+        setNotes(data.notes);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
+    useEffect(() => { load(); }, [load]);
+
+    if (loading) return React.createElement("div", { className: "faglist-loading" }, "Laden...");
+
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
+
+    return React.createElement(
+      "div",
+      null,
+      error && React.createElement("div", { className: "faglist-error" }, error),
+      React.createElement("div", { className: "faglist-section-title" }, `Letzte \u00C4nderungen (${notes.length})`),
+      notes.length === 0
+        ? React.createElement("div", { className: "faglist-empty" }, "Keine \u00C4nderungen vorhanden.")
+        : React.createElement(
+            "div",
+            { className: "faglist-scroll-list" },
+            notes.map((n) =>
+              React.createElement(
+                "div",
+                { key: n.id, className: "faglist-note-card" },
+                React.createElement(
+                  "div",
+                  { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" } },
+                  React.createElement(
+                    "span",
+                    {
+                      className: "faglist-rank-name",
+                      onClick: () => openUserModal(n.target_discord_id, n.target_username),
+                      style: { fontWeight: "600", cursor: "pointer" }
+                    },
+                    resolveUsername(n.target_discord_id) !== n.target_discord_id ? resolveUsername(n.target_discord_id) : n.target_username
+                  ),
+                  n.updated_at && React.createElement("span", { className: "faglist-note-date", style: { margin: 0 } }, fmtDate(n.updated_at))
+                ),
+                React.createElement("div", { className: "faglist-note-content" }, n.content),
+                React.createElement("div", { className: "faglist-note-author", style: { marginTop: "6px", fontSize: "11px" } }, `von ${displayName(n.author_discord_id, n.author_username)}`)
+              )
+            )
+          )
     );
   }
 

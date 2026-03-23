@@ -8,6 +8,7 @@ const rankingRoutes = require("./routes/ranking");
 const meRoutes = require("./routes/me");
 const usersRoutes = require("./routes/users");
 const allNotesRoutes = require("./routes/allNotes");
+const recentNotesRoutes = require("./routes/recentNotes");
 const searchRoutes = require("./routes/search");
 const pluginRoutes = require("./routes/plugin");
 
@@ -21,6 +22,7 @@ async function start() {
   await fastify.register(meRoutes);
   await fastify.register(usersRoutes);
   await fastify.register(allNotesRoutes);
+  await fastify.register(recentNotesRoutes);
   await fastify.register(searchRoutes);
   await fastify.register(pluginRoutes);
 
