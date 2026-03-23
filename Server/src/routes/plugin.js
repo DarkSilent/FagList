@@ -10,7 +10,7 @@ async function pluginRoutes(fastify) {
 
   fastify.get("/api/plugin/hash", async (request, reply) => {
     try {
-      const content = fs.readFileSync(PLUGIN_PATH, "utf8");
+      const content = fs.readFileSync(PLUGIN_PATH, "utf8").replace(/\r\n/g, "\n");
       const hash = crypto.createHash("sha256").update(content).digest("hex");
       return { hash };
     } catch {

@@ -1,7 +1,7 @@
 ﻿/**
  * @name FagList
  * @author DarkSilent
- * @version 1.2.0
+ * @version 1.3.0
  * @description Kollaborativ Notizen und Spielrunden-Bewertungen zu Discord-Nutzern hinterlegen.
  * @source https://github.com/DarkSilent/FagList
  */
@@ -983,7 +983,7 @@ module.exports = (() => {
     try {
       const fs = require("fs");
       const crypto = require("crypto");
-      const content = fs.readFileSync(__filename, "utf8");
+      const content = fs.readFileSync(__filename, "utf8").replace(/\r\n/g, "\n");
       return crypto.createHash("sha256").update(content).digest("hex");
     } catch {
       return null;
